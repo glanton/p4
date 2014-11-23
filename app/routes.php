@@ -11,11 +11,13 @@
 |
 */
 
-Route::get('/', function()
-{
-	return View::make('hello');
-});
-
-Route::get('/game', function(){
-	return View::make('game');
-});
+Route::get('/', 'InterfaceController@getLobby');
+Route::get('/login', 'InterfaceController@getLogin');
+Route::post('/login', 'InterfaceController@postLogin');
+Route::post('/signup', 'InterfaceController@postSignup');
+Route::get('/lobby', 'InterfaceController@getLobby');
+Route::get('/game', 'InterfaceController@getGame');
+Route::get('/results/{gameID}', 'InterfaceController@getResults');
+Route::get('/profile/{profileID?}', 'InterfaceController@getProfile');
+Route::get('/edit/profile', 'InterfaceController@getProfileEdit');
+Route::post('/edit/profile', 'InterfaceController@postProfileEdit');
