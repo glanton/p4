@@ -14,6 +14,7 @@
 Route::get('/', 'InterfaceController@getLobby');
 Route::get('/login', 'InterfaceController@getLogin');
 Route::post('/login', 'InterfaceController@postLogin');
+Route::get('/logout', 'InterfaceController@getLogout');
 Route::post('/signup', 'InterfaceController@postSignup');
 Route::get('/lobby', 'InterfaceController@getLobby');
 Route::get('/game', 'InterfaceController@getGame');
