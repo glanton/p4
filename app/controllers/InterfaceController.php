@@ -6,13 +6,51 @@ class InterfaceController extends BaseController {
         return View::make('login');
     }
      
+     
     public function postLogin() {
+        
+        
         return View::make('lobby');
     }
       
+     
+    // validate signup data and create a new account
     public function postSignup() {
-        return View::make('lobby');
+        
+        // gather signup form data
+        $signupData = Input::all();
+        
+        // set validation rules
+        $rules = array(
+            'username' => 'alpha_num|required|unique:users',
+            'email' => 'email|required|unique:users',
+            'confirmEmail' => 'same:email',
+            'password' => 'min:6',
+            'confirmPassword' => 'same:password'
+        );
+        
+        // build the validator
+        $validator = Validator::make($signupData, $rules);
+        
+        // check validation
+        if ($validator->passes()) {
+            
+            // add new user to the database
+            $user = new User();
+            $user->username = Input::get('username');
+            $user->email = Input::get('email');
+            $user->password = Hash::make(Input::get('password')); //hash password for security
+            $user->save();
+            
+            return Redirect::to('/lobby');
+        }
+        
+        Input::flashExcept('password', 'confirmPassword');
+        
+        return Redirect::to('/login')
+            ->withErrors($validator);
     }
+    
     
     public function getLobby() {
         return View::make('lobby');
