@@ -17,7 +17,20 @@
     
     <div id="header">
         <div id="logo">Tayak</div>
-        <div id="nav">Profile &nbsp;&nbsp;&nbsp; Controls</div>
+        <div id="controls">
+            @yield('controls')
+        </div>
+        <div id="nav">
+            <!-- only display username and log out option if logged in -->
+            @if (Auth::check())
+                {{ Auth::user()->username; }}
+                &nbsp;&nbsp;&nbsp;
+                <a href='{{ url('/logout') }}'>Log out</a>
+                &nbsp;&nbsp;&nbsp;
+            @endif
+            
+            Controls
+        </div>
     </div>
         
     <div id="content">

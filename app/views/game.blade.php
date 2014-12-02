@@ -6,6 +6,11 @@
 @stop
 
 
+@section('controls')
+    
+@stop
+
+
 @section('content')
     
     <canvas id="gameBoard"></canvas>

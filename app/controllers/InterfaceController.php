@@ -12,7 +12,6 @@ class InterfaceController extends BaseController {
     }
     
     
-    
     public function getLogin() {
         return View::make('login');
     }
@@ -67,22 +66,12 @@ class InterfaceController extends BaseController {
         // check validation
         if ($validator->passes()) {
             
-            // generate user authkey until unique
-            $authKey = 0;
-            do {
-                $authKey = str_random(32);
-                $authValidator = Validator::make(
-                    array('authKey' => $authKey),
-                    array('authKey' => 'unique:users')
-                );  
-            } while ($authValidator->fails());
-            
             // add new user to the database
             $user = new User();
             $user->username = Input::get('username');
             $user->email = Input::get('email');
             $user->password = Hash::make(Input::get('password')); //hash password for security
-            $user->authkey = $authKey;
+            $user->authkey = Input::get('username') . str_random(32);
             $user->save();
             
             return Redirect::to('/lobby');
@@ -93,11 +82,72 @@ class InterfaceController extends BaseController {
         
         return Redirect::to('/login')
             ->withErrors($validator);
+            
     }
     
     
     public function getLobby() {
         return View::make('lobby');
+    }
+    
+    
+    public function postUpdateLobby() {
+
+        return View::make('lobby');
+    }
+            
+
+    public function postNewGame() {
+    
+        // generate game interface_id until unique
+        $interfaceId = 0;
+        do {
+            $interfaceId = str_random(32);
+            $interfaceIdValidator = Validator::make(
+                array('interface_id' => $interfaceId),
+                array('interface_id' => 'unique:games')
+            );  
+        } while ($interfaceIdValidator->fails());
+        
+        // generate game authkey until unique
+        $authkey = 0;
+        do {
+            $authkey = str_random(32);
+            $authkeyValidator = Validator::make(
+                array('authkey' => $authkey),
+                array('authkey' => 'unique:games')
+            );  
+        } while ($authkeyValidator->fails());         
+
+        // create new game, add it to the games table
+        $newGame = new Game();
+        $newGame->interface_id = $interfaceId;
+        $newGame->authkey = $authkey;
+        $newGame->user_count = 1;
+        $newGame->begun = false;
+        $newGame->complete = false;
+        $newGame->save();
+        
+        // associate new game with the user who created it (the one currently logged in)
+        $newGame->users()->save(Auth::user());
+
+        return Redirect::to('/lobby');
+    
+    }
+
+
+    public function postStartGame() {
+        return Redirect::action('InterfaceController@postUpdateLobby');
+    }
+    
+    
+    public function postLeaveGame() {
+        return Redirect::action('InterfaceController@postUpdateLobby');
+    }
+    
+    
+    public function postJoinGame() {
+        return Redirect::action('InterfaceController@postUpdateLobby');
     }
     
     public function getGame() {
