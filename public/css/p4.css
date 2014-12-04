@@ -17,7 +17,7 @@ html, body {
 
 #content {
     padding: 0 40px;
-    font-size: 3em;
+    font-size: 1em;
     font-weight: bold;
 }
 
@@ -82,4 +82,58 @@ html, body {
     margin: 40px 0;
     background-color: black;
     border: 20px solid #666666;
+}
+
+
+
+/********** styles for LOBBY view **********
+*******************************************/
+
+.currentGameSection {
+    background-color: #ffff77;
+    margin: 25px 50px;
+    border-radius: 5px;
+    max-width: 800px;
+}
+
+.gameButton {
+    padding: 5px 20px;
+    margin-right: 10px;
+    font-size: .9em;
+    background-color: white;
+}
+
+.gameButtonForm {
+    display: inline;
+}
+
+.gameControls {
+    padding: 10px 10px;
+    background-color: #555555;
+    text-align: left;
+    border-radius: 0 0 5px 5px;
+}
+
+.gameInfo {
+    padding: 10px;
+    overflow: hidden;
+}
+
+.gameInterfaceId {
+    color: #555555;
+    margin-bottom: 10px;
+}
+
+.gameSection {
+    background-color: #333333;
+    margin: 25px 50px;
+    border-radius: 5px;
+    max-width: 800px;
+}
+
+.gameUser {
+    font-size: 1.5em;
+    color: #999999;
+    float: left;
+    width: 50%;
 }

@@ -17,13 +17,14 @@ Route::post('/login', 'InterfaceController@postLogin');
 Route::get('/logout', 'InterfaceController@getLogout');
 Route::post('/signup', 'InterfaceController@postSignup');
 Route::get('/lobby', 'InterfaceController@getLobby');
+// change to post /update/lobby and @postUpdateLobby when ready to integrate with AJAX
 Route::post('/update/lobby', 'InterfaceController@postUpdateLobby');
 Route::post('/new/game', 'InterfaceController@postNewGame');
 Route::post('/start/game', 'InterfaceController@postStartGame');
 Route::post('/leave/game', 'InterfaceController@postLeaveGame');
-Route::post('/join/game', 'InterfaceController@postJoinGame');
+Route::post('/join/game/{interfaceId}', 'InterfaceController@postJoinGame');
 Route::get('/game', 'InterfaceController@getGame');
-Route::get('/results/{gameID}', 'InterfaceController@getResults');
-Route::get('/profile/{profileID?}', 'InterfaceController@getProfile');
+Route::get('/results/{gameId}', 'InterfaceController@getResults');
+Route::get('/profile/{profileId?}', 'InterfaceController@getProfile');
 Route::get('/edit/profile', 'InterfaceController@getProfileEdit');
 Route::post('/edit/profile', 'InterfaceController@postProfileEdit');

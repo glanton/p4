@@ -18,12 +18,12 @@
 
 
 @section('content')
-    
-    <p>lobby</p>
+
+    <div class="gameList"></div>
     
 @stop
 
 
 @section('scripts')
-
+    <script type="text/javascript" src='{{ asset('scripts/lobby.js') }}'></script>
 @stop

@@ -5,7 +5,7 @@ class InterfaceController extends BaseController {
     public function __construct() {
         
         // run CSRF fliter on POST requests
-        $this->beforeFilter('csrf', array('on' => 'post'));
+        // $this->beforeFilter('csrf', array('on' => 'post'));
         // block all pages except for login page until user authenticated
         $this->beforeFilter('auth', array('except' => array('getLogin', 'postLogin', 'postSignup')));
         
@@ -91,9 +91,49 @@ class InterfaceController extends BaseController {
     }
     
     
+    // change to postUpdateLobby when ready to integrate with AJAX
     public function postUpdateLobby() {
+        
+        // pull collection of all games that haven't begun and aren't complete
+        $games = Game::where('begun', '=', 'false')
+            ->where('complete', '=', 'false')
+            ->get();
 
-        return View::make('lobby');
+        // pull authkey of user's current game
+        $currentGameAuthkey = Auth::user()->current_game_authkey;
+            
+        // initialize array to hold list of games, set first element of array to indicate currently in no game, and set iterator to start on next element
+        $gameList = array();
+        $gameList[0] = 'in_no_game';
+        $gameListCount = 1;
+        
+        // for each game in the collection, save the interface_id and usernames
+        foreach ($games as $game) {
+            // iterator that can be changed to zero in case game matches user's current game
+            $flexibleCount = $gameListCount;
+            
+            // check if game matches user's current game
+            if ($game->authkey == $currentGameAuthkey) {
+                // change flex count to 0 and hold true count
+                $flexibleCount = 0;
+                $gameListCount -= 1;
+            }
+            
+            // create new object within gameList for each game
+            $gameList[$flexibleCount] = new stdObject();
+            $gameList[$flexibleCount]->interfaceId = $game->interface_id;
+            $gameList[$flexibleCount]->users = array();
+            
+            // store each user's username within an array within the new object
+            foreach ($game->users as $user) {
+                array_push($gameList[$flexibleCount]->users, $user->username);
+            }
+            
+            // maintain true count
+            $gameListCount += 1;
+        }
+        
+        return Response::json($gameList);
     }
             
 
@@ -130,14 +170,19 @@ class InterfaceController extends BaseController {
         
         // associate new game with the user who created it (the one currently logged in)
         $newGame->users()->save(Auth::user());
-
+        
+        // mark new game as the user's current game
+        Auth::user()->current_game_authkey = $authkey;
+        Auth::user()->save();
+        
         return Redirect::to('/lobby');
     
     }
 
 
     public function postStartGame() {
-        return Redirect::action('InterfaceController@postUpdateLobby');
+        return Redirect::to('/lobby');
+        //return Redirect::action('InterfaceController@postUpdateLobby');
     }
     
     
@@ -146,7 +191,7 @@ class InterfaceController extends BaseController {
     }
     
     
-    public function postJoinGame() {
+    public function postJoinGame($interfaceId) {
         return Redirect::action('InterfaceController@postUpdateLobby');
     }
     
@@ -154,11 +199,11 @@ class InterfaceController extends BaseController {
         return View::make('game');
     }
        
-    public function getResults($gameID) {
+    public function getResults($gameId) {
         return View::make('results');
     }
       
-    public function getProfile($profileID = null) {
+    public function getProfile($profileId = null) {
         return View::make('profile');
     }
         
