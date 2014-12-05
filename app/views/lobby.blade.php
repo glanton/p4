@@ -8,18 +8,22 @@
 
 @section('controls')
     
-    {{ Form::open(array('id' => 'newGameForm', 'url' => '/new/game', 'method' => 'POST')) }}
-    
-        {{ Form::submit('New Game') }}
-    
-    {{ Form::close() }}
-    
+    @if (Auth::user()->current_game_authkey == 'not_in_game')
+        {{ Form::open(array('id' => 'newGameForm', 'url' => '/new/game', 'method' => 'POST')) }}
+        
+            {{ Form::submit('New Game') }}
+        
+        {{ Form::close() }}
+    @endif
+
 @stop
 
 
 @section('content')
 
     <div class="gameList"></div>
+        
+    {{ Form::token() }}
     
 @stop
 

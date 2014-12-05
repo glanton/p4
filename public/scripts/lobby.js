@@ -1,6 +1,12 @@
+// set max users per single game
+var MAX_USERS = 4;
+
+// initialize global csrfToken variable
+var csrfToken;
+
 // AJAX call to pull game list data from server and then update display every five seconds
 function updateLobby() {
-   jQuery.post("../update/lobby", function(data) {
+   jQuery.post("../update/lobby", {_token : csrfToken}, function(data) {
         var jsonData = data;
         var currentGameSection;
         var currentGameInfo;
@@ -20,34 +26,34 @@ function updateLobby() {
         // iterate through each game, displaying information and adding appropriate buttons
         for (var i = flexibleCount; i < jsonData.length; i++) {
           
-          currentGameSection = jQuery("<div class='gameSection'></div>").appendTo(".gameList");
-          currentGameInfo = jQuery("<div class='gameInfo'></div>").appendTo(currentGameSection);
-          jQuery(currentGameInfo).append("<div class='gameInterfaceId'>" + jsonData[i].interfaceId + "</div>");
+            currentGameSection = jQuery("<div class='gameSection'></div>").appendTo(".gameList");
+            currentGameInfo = jQuery("<div class='gameInfo'></div>").appendTo(currentGameSection);
+            jQuery(currentGameInfo).append("<div class='gameInterfaceId'>" + jsonData[i].interfaceId + "</div>");
+            
+            for (var k = 0; k < jsonData[i].users.length; k++) {
+                jQuery(currentGameInfo).append("<div class='gameUser'>" + jsonData[i].users[k] + "</div>");
+            }
+            
+            currentGameControls = jQuery("<div class='gameControls'></div>").appendTo(currentGameSection);
+            
+            // handle different cases: 1) in a game 2) not in a game and game not full (4 users max per game)
+            if (inGame === true && i === 0) {
+              
+                // highlight user's game
+                jQuery(currentGameSection).addClass("currentGameSection").removeClass("gameSection");
+                
+                // add start button
+                jQuery(currentGameControls).append("<form class='gameButtonForm' method='POST' action='../start/game' accept-charset='UTF-8'><input name='_token' type='hidden' value=" + csrfToken + "><input class='gameButton' type='submit' value='Start'></form>");
+                
+                // add leave button
+                jQuery(currentGameControls).append("<form class='gameButtonForm' method='POST' action='../leave/game' accept-charset='UTF-8'><input name='_token' type='hidden' value=" + csrfToken + "><input class='gameButton' type='submit' value='Leave'></form>");
           
-          for (var k = 0; k < jsonData[i].users.length; k++) {
-            jQuery(currentGameInfo).append("<div class='gameUser'>" + jsonData[i].users[k] + "</div>");
-          }
-          
-          currentGameControls = jQuery("<div class='gameControls'></div>").appendTo(currentGameSection);
-          
-          // handle different cases: 1) in a game and user's game; 2) in a game and not user's game; 3) not in a game
-          if (inGame === true && i === 0) {
-            
-            // highlight user's game
-            jQuery(currentGameSection).addClass("currentGameSection").removeClass("gameSection");
-            
-            // add start button
-            jQuery(currentGameControls).append("<form class='gameButtonForm' method='POST' action='../start/game' accept-charset='UTF-8'><input class='gameButton' type='submit' value='Start'></form>");
-            
-            // add leave button
-            jQuery(currentGameControls).append("<form class='gameButtonForm' method='POST' action='../leave/game' accept-charset='UTF-8'><input class='gameButton' type='submit' value='Leave'></form>");
-            
-          } else if (inGame === false) {
-            
-            // add join button
-            jQuery(currentGameControls).append("<form class='gameButtonForm' method='POST' action='../join/game/" + jsonData[flexibleCount].interfaceId + "' accept-charset='UTF-8'><input class='gameButton' type='submit' value='Join'></form>");
-            
-          }
+            } else if (inGame === false && jsonData[i].users.length < MAX_USERS) {
+              
+                // add join button
+                jQuery(currentGameControls).append("<form class='gameButtonForm' method='POST' action='../join/game' accept-charset='UTF-8'><input name='_token' type='hidden' value=" + csrfToken + "><input type='hidden' name='interfaceId' value=" + jsonData[i].interfaceId +"><input class='gameButton' type='submit' value='Join'></form>");
+              
+            }
         }
     });
    
@@ -57,6 +63,7 @@ function updateLobby() {
 
 
 window.onload = function() {
+    csrfToken = jQuery("input[name=_token]").val();
     updateLobby(); 
 }
 

@@ -2,21 +2,30 @@
 
 class InterfaceController extends BaseController {
     
+    /*=====
+    __construct
+    =====*/
     public function __construct() {
         
         // run CSRF fliter on POST requests
-        // $this->beforeFilter('csrf', array('on' => 'post'));
+        $this->beforeFilter('csrf', array('on' => 'post'));
         // block all pages except for login page until user authenticated
         $this->beforeFilter('auth', array('except' => array('getLogin', 'postLogin', 'postSignup')));
         
     }
     
     
+    /*=====
+    getLogin
+    =====*/
     public function getLogin() {
         return View::make('login');
     }
      
-     
+    
+    /*=====
+    postLogin
+    =====*/
     public function postLogin() {
         
         // gather email and password credentials
@@ -36,6 +45,9 @@ class InterfaceController extends BaseController {
     }
     
     
+    /*=====
+    getLogout
+    =====*/
     public function getLogout() {
         
         Auth::logout();
@@ -44,8 +56,11 @@ class InterfaceController extends BaseController {
         
     }
       
-     
-    // validate signup data and create a new account
+    
+    /*=====
+    postSignup
+        validate signup data and create a new account
+    =====*/
     public function postSignup() {
         
         // gather signup form data
@@ -86,12 +101,17 @@ class InterfaceController extends BaseController {
     }
     
     
+    /*=====
+    getLobby
+    =====*/
     public function getLobby() {
         return View::make('lobby');
     }
     
     
-    // change to postUpdateLobby when ready to integrate with AJAX
+    /*=====
+    postUpdateLobby
+    =====*/
     public function postUpdateLobby() {
         
         // pull collection of all games that haven't begun and aren't complete
@@ -137,81 +157,179 @@ class InterfaceController extends BaseController {
     }
             
 
+    /*=====
+    postNewGame
+    =====*/
     public function postNewGame() {
     
-        // generate game interface_id until unique
-        $interfaceId = 0;
-        do {
-            $interfaceId = str_random(32);
-            $interfaceIdValidator = Validator::make(
-                array('interface_id' => $interfaceId),
-                array('interface_id' => 'unique:games')
-            );  
-        } while ($interfaceIdValidator->fails());
-        
-        // generate game authkey until unique
-        $authkey = 0;
-        do {
-            $authkey = str_random(32);
-            $authkeyValidator = Validator::make(
-                array('authkey' => $authkey),
-                array('authkey' => 'unique:games')
-            );  
-        } while ($authkeyValidator->fails());         
-
-        // create new game, add it to the games table
-        $newGame = new Game();
-        $newGame->interface_id = $interfaceId;
-        $newGame->authkey = $authkey;
-        $newGame->user_count = 1;
-        $newGame->begun = false;
-        $newGame->complete = false;
-        $newGame->save();
-        
-        // associate new game with the user who created it (the one currently logged in)
-        $newGame->users()->save(Auth::user());
-        
-        // mark new game as the user's current game
-        Auth::user()->current_game_authkey = $authkey;
-        Auth::user()->save();
+        // get user's current game authkey
+        $user = Auth::user();
+        $currentGameAuthkey = $user->current_game_authkey;
+    
+        // check that user is not currently in a game
+        if ($currentGameAuthkey == 'not_in_game') {
+    
+            // generate game interface_id until unique
+            $interfaceId = 0;
+            do {
+                $interfaceId = str_random(32);
+                $interfaceIdValidator = Validator::make(
+                    array('interface_id' => $interfaceId),
+                    array('interface_id' => 'unique:games')
+                );  
+            } while ($interfaceIdValidator->fails());
+            
+            // generate game authkey until unique
+            $authkey = 0;
+            do {
+                $authkey = str_random(32);
+                $authkeyValidator = Validator::make(
+                    array('authkey' => $authkey),
+                    array('authkey' => 'unique:games')
+                );  
+            } while ($authkeyValidator->fails());         
+    
+            // create new game, add it to the games table
+            $newGame = new Game();
+            $newGame->interface_id = $interfaceId;
+            $newGame->authkey = $authkey;
+            $newGame->user_count = 1;
+            $newGame->begun = false;
+            $newGame->complete = false;
+            $newGame->save();
+            
+            // associate new game with the user who created it (the one currently logged in)
+            $newGame->users()->attach($user->id);
+            $newGame->save();
+            
+            // mark new game as the user's current game
+            $user->current_game_authkey = $authkey;
+            $user->save();
+        }
         
         return Redirect::to('/lobby');
     
     }
 
 
+    /*=====
+    postStartGame
+    =====*/
     public function postStartGame() {
         return Redirect::to('/lobby');
         //return Redirect::action('InterfaceController@postUpdateLobby');
     }
     
     
+    /*=====
+    postLeaveGame
+    =====*/
     public function postLeaveGame() {
-        return Redirect::action('InterfaceController@postUpdateLobby');
+        
+        // get user's current game authkey
+        $user = Auth::user();
+        $currentGameAuthkey = $user->current_game_authkey;
+    
+        // check that user is currently in a game
+        if ($currentGameAuthkey != 'not_in_game') {
+    
+            // get current game object
+            $currentGame = Game::where('authkey', '=', $currentGameAuthkey)
+                ->first();
+        
+            // detach user from current game
+            $currentGame->users()->detach($user->id);
+        
+            // decrement user count of current game and save
+            $currentGame->user_count -= 1;
+            $currentGame->save();
+        
+            // reset user's current game authkey
+            $user->current_game_authkey = 'not_in_game';
+            $user->save();
+        }  
+
+        return Redirect::to('/lobby');
     }
     
     
-    public function postJoinGame($interfaceId) {
-        return Redirect::action('InterfaceController@postUpdateLobby');
+    /*=====
+    postJoinGame
+    =====*/
+    public function postJoinGame() {
+        
+        // get user's current game authkey
+        $user = Auth::user();
+        $currentGameAuthkey = $user->current_game_authkey;
+    
+        // check that user is not currently in a game
+        if ($currentGameAuthkey == 'not_in_game') {
+         
+            // get requested game object
+            $currentGame = Game::where('interface_id', '=', Input::get('interfaceId'))
+                ->first();
+            
+            // check that game with provided interfaceId exists
+            if (!empty($currentGame)) {
+                
+                // check that game is not full
+                if ($currentGame->user_count < 4) {
+                    
+                    // attach user to current game
+                    $currentGame->users()->attach($user->id);
+                    
+                    // increment user count of current game and save
+                    $currentGame->user_count += 1;
+                    $currentGame->save();
+                    
+                    // update the user's current game authkey
+                    $user->current_game_authkey = $currentGame->authkey;
+                    $user->save();
+                }
+                
+            }
+        }
+        
+        return Redirect::to('/lobby');
     }
     
+    
+    /*=====
+    getGame
+    =====*/
     public function getGame() {
         return View::make('game');
     }
-       
+     
+     
+    /*=====
+    getResults
+    =====*/  
     public function getResults($gameId) {
         return View::make('results');
     }
-      
+     
+     
+    /*=====
+    getProfile
+    =====*/ 
     public function getProfile($profileId = null) {
         return View::make('profile');
     }
-        
-    public function getProfileEdit() {
-        return View::make('profile_edit');
-    }
      
-    public function postProfileEdit() {
+
+    /*=====
+    getEditProfile
+    =====*/   
+    public function getEditProfile() {
+        return View::make('edit_profile');
+    }
+    
+    
+    /*=====
+    postEditProfile
+    =====*/
+    public function postEditProfile() {
         return View::make('profile');
     }
     
