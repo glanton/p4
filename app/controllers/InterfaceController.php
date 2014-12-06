@@ -47,9 +47,37 @@ class InterfaceController extends BaseController {
     
     /*=====
     getLogout
+    check if user is currently in a game and leave it if so
     =====*/
     public function getLogout() {
+
+        // get user's current game authkey
+        $user = Auth::user();
+        $currentGameAuthkey = $user->current_game_authkey;
+    
+        // check that user is currently in a game
+        if ($currentGameAuthkey != 'not_in_game') {
+    
+            // get current game object
+            $currentGame = Game::where('authkey', '=', $currentGameAuthkey)
+                ->first();
         
+            // check for and only leave games that have not yet begun
+            if ($currentGame->begun == false) {
+ 
+                // detach user from current game
+               $currentGame->users()->detach($user->id);
+           
+               // decrement user count of current game and save
+               $currentGame->user_count -= 1;
+               $currentGame->save();
+            }
+            
+            // reset user's current game authkey
+            $user->current_game_authkey = 'not_in_game';
+            $user->save();       
+        }         
+          
         Auth::logout();
         
         return Redirect::to('login');
@@ -237,16 +265,20 @@ class InterfaceController extends BaseController {
             $currentGame = Game::where('authkey', '=', $currentGameAuthkey)
                 ->first();
         
-            // detach user from current game
-            $currentGame->users()->detach($user->id);
-        
-            // decrement user count of current game and save
-            $currentGame->user_count -= 1;
-            $currentGame->save();
-        
-            // reset user's current game authkey
-            $user->current_game_authkey = 'not_in_game';
-            $user->save();
+            // check for and only leave games that have not yet begun
+            if ($currentGame->begun == false) {
+ 
+                // detach user from current game
+               $currentGame->users()->detach($user->id);
+           
+               // decrement user count of current game and save
+               $currentGame->user_count -= 1;
+               $currentGame->save();
+           
+               // reset user's current game authkey
+               $user->current_game_authkey = 'not_in_game';
+               $user->save();       
+            }
         }  
 
         return Redirect::to('/lobby');
@@ -272,8 +304,8 @@ class InterfaceController extends BaseController {
             // check that game with provided interfaceId exists
             if (!empty($currentGame)) {
                 
-                // check that game is not full
-                if ($currentGame->user_count < 4) {
+                // check that game is not full and has not begun
+                if ($currentGame->user_count < 4 and $currentGame->begun == false) {
                     
                     // attach user to current game
                     $currentGame->users()->attach($user->id);

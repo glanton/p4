@@ -22,8 +22,6 @@
 @section('content')
 
     <div class="gameList"></div>
-        
-    {{ Form::token() }}
     
 @stop
 

@@ -47,9 +47,11 @@
         </div>
     </div>
 
+    {{ Form::token() }}
     
     <!-- scripts: jQuery from Google and local script for switching forms -->
     <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js' type='text/javascript'></script>
+    <script type="text/javascript" src='{{ asset('scripts/onclose.js') }}'></script>
 
     @yield('scripts')
 
