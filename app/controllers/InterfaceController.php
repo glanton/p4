@@ -68,9 +68,16 @@ class InterfaceController extends BaseController {
                 // detach user from current game
                $currentGame->users()->detach($user->id);
            
-               // decrement user count of current game and save
+               // decrement user count of current game
                $currentGame->user_count -= 1;
-               $currentGame->save();
+               
+                // if no users remain in game, set it to complete
+                if ($currentGame->user_count == 0) {
+                    $currentGame->complete = true;
+                }
+                
+                // save game
+                $currentGame->save();
             }
             
             // reset user's current game authkey
@@ -131,8 +138,49 @@ class InterfaceController extends BaseController {
     
     /*=====
     getLobby
+    load lobby page and also cleanup inactive games
     =====*/
     public function getLobby() {
+        
+        // pull collection of all games that haven't begun and aren't complete
+        $games = Game::where('begun', '=', 'false')
+            ->where('complete', '=', 'false')
+            ->get();
+        
+        // check how long each unstarted game has been active
+        foreach ($games as $game) {
+            
+            $secondsElapsed = time() - strtotime($game->created_at);
+            $minutesElapsed = floor($secondsElapsed/60);
+            
+            // if game was created more than twenty minutes ago, detach all players, set their current game authkey to "not_in_game", and close the game (set complete to true)
+            if ($minutesElapsed >= 20) {
+            
+                $users = $game->users;
+                
+                foreach ($users as $user) {
+                    
+                    // detach user from current game
+                    $game->users()->detach($user->id);
+               
+                    // decrement user count of current game
+                    $game->user_count -= 1;
+                   
+                    // if no users remain in game, set it to complete
+                    if ($game->user_count == 0) {
+                        $game->complete = true;
+                    }
+                    
+                    // save game
+                    $game->save();
+               
+                    // reset user's current game authkey
+                    $user->current_game_authkey = 'not_in_game';
+                    $user->save();
+                }
+            }
+        }
+        
         return View::make('lobby');
     }
     
@@ -244,8 +292,30 @@ class InterfaceController extends BaseController {
     postStartGame
     =====*/
     public function postStartGame() {
+        
+        // get user's current game authkey
+        $user = Auth::user();
+        $currentGameAuthkey = $user->current_game_authkey;
+        
+        // check that user is currently in a game
+        if ($currentGameAuthkey != 'not_in_game') {
+            
+            // get current game object
+            $currentGame = Game::where('authkey', '=', $currentGameAuthkey)
+                ->first();
+            
+            // check for and only start games that have not yet begun
+            if ($currentGame->begun == false) {
+                
+                // begin current game and save
+                $currentGame->begun = true;
+                $currentGame->save();
+                
+                return Redirect::to('/game');
+            }
+        }
+        
         return Redirect::to('/lobby');
-        //return Redirect::action('InterfaceController@postUpdateLobby');
     }
     
     
@@ -267,17 +337,24 @@ class InterfaceController extends BaseController {
         
             // check for and only leave games that have not yet begun
             if ($currentGame->begun == false) {
- 
+
                 // detach user from current game
-               $currentGame->users()->detach($user->id);
+                $currentGame->users()->detach($user->id);
            
-               // decrement user count of current game and save
-               $currentGame->user_count -= 1;
-               $currentGame->save();
+                // decrement user count of current game
+                $currentGame->user_count -= 1;
+               
+                // if no users remain in game, set it to complete
+                if ($currentGame->user_count == 0) {
+                    $currentGame->complete = true;
+                }
+                
+                // save game
+                $currentGame->save();
            
-               // reset user's current game authkey
-               $user->current_game_authkey = 'not_in_game';
-               $user->save();       
+                // reset user's current game authkey
+                $user->current_game_authkey = 'not_in_game';
+                $user->save();       
             }
         }  
 
@@ -323,6 +400,33 @@ class InterfaceController extends BaseController {
         }
         
         return Redirect::to('/lobby');
+    }
+
+    
+    /*=====
+    postCheckGameStatus
+    check if another player has started the game and if so load the game page
+    =====*/
+    public function postCheckGameStatus() {
+
+        // pull authkey of user's current game
+        $currentGameAuthkey = Auth::user()->current_game_authkey;
+        
+        // set game status to "not_in_game" (will be sent if user isn't in a game)
+        $gameStatus = 'not_in_game';
+        
+        // check that user is currently in a game
+        if ($currentGameAuthkey != 'not_in_game') {
+            
+            // get current game object
+            $currentGame = Game::where('authkey', '=', $currentGameAuthkey)
+                ->first();
+            
+            // collect begun status of current game
+            $gameStatus = $currentGame->begun;
+        }
+        
+        return Response::json($gameStatus);
     }
     
     

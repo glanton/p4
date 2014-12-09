@@ -20,4 +20,6 @@
 
 @section('scripts')
 
+    <script type="text/javascript" src='{{ asset('scripts/gamestatus.js') }}'></script>
+
 @stop

@@ -1,19 +1,22 @@
+
+
 // set max users per single game
 var MAX_USERS = 4;
 
-// initialize global csrfToken variable
+// initialize global csrfToken and base url variables
 var csrfToken;
+var baseURL;
 
 // AJAX call to pull game list data from server and then update display every five seconds
 function updateLobby() {
-   jQuery.post("../update/lobby", {_token : csrfToken}, function(data) {
+   jQuery.post(baseURL + "/update/lobby", {_token : csrfToken}, function(data) {
         var jsonData = data;
         var currentGameSection;
         var currentGameInfo;
         var currentGameControls;
         var flexibleCount = 0;
         var inGame = true;
-    
+
         // check if user is currently in a game
         if (jsonData[0] === "in_no_game") {
           flexibleCount = 1;
@@ -61,9 +64,12 @@ function updateLobby() {
    setTimeout(updateLobby, 5000);
 }
 
-
-window.onload = function() {
+jQuery(document).ready(function(){
+    
+    // set csrf token and baseURL from hidden inputs on the page
     csrfToken = jQuery("input[name=_token]").val();
-    updateLobby(); 
-}
+    baseURL = jQuery("input[name=baseURL]").val();
+    
+    updateLobby();  
+});
 

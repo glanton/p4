@@ -27,5 +27,8 @@
 
 
 @section('scripts')
+    
     <script type="text/javascript" src='{{ asset('scripts/lobby.js') }}'></script>
+    <script type="text/javascript" src='{{ asset('scripts/gamestatus.js') }}'></script>
+    
 @stop

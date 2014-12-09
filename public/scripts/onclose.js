@@ -6,17 +6,13 @@ var exitByLinkOrForm = false;
 
 csrfToken = jQuery("input[name=_token]").val();
 
-// activate tracking variable if link clicked
-jQuery("a").on("click", function() {
-   exitByLinkOrForm = true;
+activateTrackingVariables();
+
+// in addition to initial click handlers, add more on an AJAX event to capture generated form submits and links
+jQuery(document).ajaxSuccess(function() {
+   activateTrackingVariables();
 });
 
-// activate tracking variable if form submit clicked
-jQuery("form").on("submit", function() {
-   exitByLinkOrForm = true;
-});
-
-console.log("in");
 
 jQuery(window).bind("beforeunload", function() {
    // if the user to did exit by link or form (meaning they closed the browser), post to server to leave an unstarted game
@@ -24,4 +20,20 @@ jQuery(window).bind("beforeunload", function() {
       jQuery.post("../leave/game", {_token : csrfToken});
    }
 })
+
+
+// function to add tracking to links and submit inputs
+function activateTrackingVariables() {
+   
+   // activate tracking variable if link clicked
+   jQuery("a").on("click", function() {
+      exitByLinkOrForm = true;
+   });
+   
+   // activate tracking variable if form submit clicked
+   jQuery("form").on("submit", function() {
+      exitByLinkOrForm = true;
+   });
+   
+}
 

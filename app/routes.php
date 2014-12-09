@@ -22,6 +22,7 @@ Route::post('/new/game', 'InterfaceController@postNewGame');
 Route::post('/start/game', 'InterfaceController@postStartGame');
 Route::post('/leave/game', 'InterfaceController@postLeaveGame');
 Route::post('/join/game', 'InterfaceController@postJoinGame');
+Route::post('check/game', 'InterfaceController@postCheckGameStatus');
 Route::get('/game', 'InterfaceController@getGame');
 Route::get('/results/{gameId}', 'InterfaceController@getResults');
 Route::get('/profile/{profileId?}', 'InterfaceController@getProfile');
