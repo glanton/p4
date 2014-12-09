@@ -1,14 +1,25 @@
 var http = require('http');
 var io = require('socket.io');
+var url = require('url');
 
 var server = http.createServer(function(request, response){
-   console.log('Connected to Node server');
-   response.writeHead(200, {'content-type': 'plain-text'});
+   
+   // read POST requests to build a new game based on request from laravel
+   if (request.method == "POST" && request.url == "/build/game/on/server") {
+      console.log("game data received");
+      
+      response.writeHead(200, {"Content-Type" : "text/html"});
+      response.write("you're in buddy");
+      response.end();
+   }
+   
+   console.log("Connected to Node server");
+   response.writeHead(200, {"content-type" : "plain-text"});
    response.end();
 });
 
 server.listen(8734);
-console.log('listening on port 8734');
+console.log("listening on port 8734");
 var ioServer = io.listen(server);
 
 // create empty player list when server starts

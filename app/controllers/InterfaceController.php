@@ -434,6 +434,7 @@ class InterfaceController extends BaseController {
     getGame
     =====*/
     public function getGame() {
+        
         return View::make('game');
     }
      
@@ -450,6 +451,18 @@ class InterfaceController extends BaseController {
     getProfile
     =====*/ 
     public function getProfile($profileId = null) {
+        
+        // test of curl... with move this to the game start controller and make some adjustments
+        $ch = curl_init();
+        
+        curl_setopt($ch, CURLOPT_URL, 'http://localhost:8734/build/game/on/server');
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, "postvar1=value1&postvar2=value2&postvar3=value3");
+        
+        curl_exec($ch);
+        curl_close($ch);
+        
+        
         return View::make('profile');
     }
      

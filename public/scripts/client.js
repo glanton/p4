@@ -34,8 +34,8 @@ window.onload = function(){
     
     // connect to node.js server
     // *****this code must be updated on live server*****
-    //var socket = io.connect('http://localhost:8734/');
-    var socket = io.connect('http://104.131.10.181:8734/')
+    var socket = io.connect('http://localhost:8734');
+    //var socket = io.connect('http://104.131.10.181:8734/')
     
     // load ship sprite sheets
     addSpriteSheet("whiteShip", "http://alexfriberg.com/images/Tayak64.png");
