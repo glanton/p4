@@ -311,6 +311,32 @@ class InterfaceController extends BaseController {
                 $currentGame->begun = true;
                 $currentGame->save();
                 
+                // initialize curl to send game authkey, usernames, and user authkeys to node js server
+                $ch = curl_init();
+                
+                // store usernames and associated authkeys as arrays within a users array
+                $users = array();
+                $usersCount = 0;
+                
+                foreach ($currentGame->users as $user) {
+                    array_push($users, array("username" => $user->username, "userAuthkey" => $user->authkey));
+                    $usersCount += 1;
+                }
+                
+                // store game authkey along with users array and encode as json
+                $gameData = array("gameAuthkey" => $currentGameAuthkey, "users" => $users);
+                $jsonGameData = json_encode($gameData);
+                
+                // curl settings
+                curl_setopt($ch, CURLOPT_URL, 'http://localhost:8734/build/game/on/server');
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonGameData);
+                
+                curl_exec($ch);
+                curl_close($ch);
+        
+                
+                
                 return Redirect::to('/game');
             }
         }
@@ -450,19 +476,7 @@ class InterfaceController extends BaseController {
     /*=====
     getProfile
     =====*/ 
-    public function getProfile($profileId = null) {
-        
-        // test of curl... with move this to the game start controller and make some adjustments
-        $ch = curl_init();
-        
-        curl_setopt($ch, CURLOPT_URL, 'http://localhost:8734/build/game/on/server');
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, "postvar1=value1&postvar2=value2&postvar3=value3");
-        
-        curl_exec($ch);
-        curl_close($ch);
-        
-        
+    public function getProfile($profileId = null) {        
         return View::make('profile');
     }
      

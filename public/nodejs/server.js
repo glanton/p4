@@ -8,8 +8,14 @@ var server = http.createServer(function(request, response){
    if (request.method == "POST" && request.url == "/build/game/on/server") {
       console.log("game data received");
       
+      // receive new game data
+      request.setEncoding("utf8");
+      request.on("data", function(data){
+         // ***** user the json data to create a new game object and add to a master games list
+         console.log(data);
+      });
+      
       response.writeHead(200, {"Content-Type" : "text/html"});
-      response.write("you're in buddy");
       response.end();
    }
    
