@@ -10,7 +10,7 @@ class InterfaceController extends BaseController {
         // run CSRF fliter on POST requests
         $this->beforeFilter('csrf', array('on' => 'post'));
         // block all pages except for login page until user authenticated
-        $this->beforeFilter('auth', array('except' => array('getLogin', 'postLogin', 'postSignup', 'postUpdateResults')));
+        $this->beforeFilter('auth', array('except' => array('getLogin', 'postLogin', 'postSignup')));
         
     }
     
@@ -462,27 +462,6 @@ class InterfaceController extends BaseController {
     public function getGame() {
         
         return View::make('game');
-    }
-     
-    
-    
-    /*=====
-    postUpdateResults
-    =====*/  
-    public function postUpdateResults() {
-        
-        // read the results data sent from the node server
-        $resultsData = Input::all();
-        
-        
-        // lookup pivots in data base
-        // add results into pivots
-        // save pivots
-        
-        // once the results are saved pass that information back to the server
-        $resultsSaved = true; 
-        
-        return Response::json($resultsSaved);
     }
     
     
