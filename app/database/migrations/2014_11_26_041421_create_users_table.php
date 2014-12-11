@@ -20,7 +20,7 @@ class CreateUsersTable extends Migration {
                $table->string('username');
                $table->string('email');
                $table->string('password');
-               $table->string('description');
+               $table->string('profile_description');
                $table->string('authkey');
                 
             });
