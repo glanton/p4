@@ -10,7 +10,7 @@ class InterfaceController extends BaseController {
         // run CSRF fliter on POST requests
         $this->beforeFilter('csrf', array('on' => 'post'));
         // block all pages except for login page until user authenticated
-        $this->beforeFilter('auth', array('except' => array('getLogin', 'postLogin', 'postSignup')));
+        $this->beforeFilter('auth', array('except' => array('getLogin', 'postLogin', 'postSignup', 'postUpdateResults')));
         
     }
     
@@ -324,7 +324,7 @@ class InterfaceController extends BaseController {
                 }
                 
                 // store game authkey along with users array and encode as json
-                $gameData = array("gameAuthkey" => $currentGameAuthkey, "users" => $users);
+                $gameData = array("gameAuthkey" => $currentGame->authkey, 'gameInterfaceId' => $currentGame->interface_id, "users" => $users);
                 $jsonGameData = json_encode($gameData);
                 
                 // curl settings
@@ -464,7 +464,29 @@ class InterfaceController extends BaseController {
         return View::make('game');
     }
      
-     
+    
+    
+    /*=====
+    postUpdateResults
+    =====*/  
+    public function postUpdateResults() {
+        
+        // read the results data sent from the node server
+        $resultsData = Input::all();
+        
+        
+        // lookup pivots in data base
+        // add results into pivots
+        // save pivots
+        
+        // once the results are saved pass that information back to the server
+        $resultsSaved = true; 
+        
+        return Response::json($resultsSaved);
+    }
+    
+    
+    
     /*=====
     getResults
     =====*/  

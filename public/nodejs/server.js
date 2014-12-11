@@ -1,4 +1,41 @@
+// get base url from input on page
+var baseURL = "http://localhost:8888";
+
+// fake score data for testing... should match actual record in database
+var fakeScoreData = {
+   gameAuthkey : "kKS5tvIMJD88m78xnpzdCCJa2z3tNkXx",
+   users : [
+      {userAuthkey : "globoxTqk99rbBRMYmLFbfE7WHxu1e0RPy4WnD", kills : 40, assists : 5, deaths : 14, victory : false},
+      {userAuthkey : "raymanhPmFNZ3GBx0jD129avf8hpmetfnkYbx7", kills : 56, assists : 12, deaths : 2, victory : true}
+   ]
+};
+
+// function to send score data to laravel to store in database
+// to be used when game has finished... wait for response true before loading results page
+function sendScoresToDatabase (scoreData) {
+   console.log("sending scores...");
+   // build POST request to send to laravel
+   var xhr = new XMLHttpRequest();
+   xhr.open("POST", baseURL + "/update/results", true);
+   xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+ 
+   // receive response back from the server that results have been posted
+   xhr.onreadystatechange = function(){
+      console.log(xhr.readyState + " " + xhr.status);
+      if (xhr.readyState === 4) {
+         if (xhr.status >= 200 && xhr.status < 300) {
+            var scoreUpdateStatus = JSON.parse(xhr.responseText);
+            console.log(scoreUpdateStatus);           
+         }
+      }
+   };
+   
+   // send score data as JSON
+   xhr.send(JSON.stringify(scoreData));
+}
+
 var http = require('http');
+var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 var io = require('socket.io');
 var url = require('url');
 
@@ -6,12 +43,11 @@ var server = http.createServer(function(request, response){
    
    // read POST requests to build a new game based on request from laravel
    if (request.method == "POST" && request.url == "/build/game/on/server") {
-      console.log("game data received");
       
       // receive new game data
       request.setEncoding("utf8");
       request.on("data", function(data){
-         // ***** user the json data to create a new game object and add to a master games list
+         // ***** use the json data to create a new game object and add to a master games list
          console.log(data);
       });
       
@@ -72,8 +108,7 @@ ioServer.sockets.on("connection", function(socket){
          GameData.currentPlayer = 'waiting';
       }
       
-      socket.emit('assign_player', GameData);
-       
+      socket.emit('assign_player', GameData);  
    });
    
    socket.on("client_sends_sprite_data", function(NewGameData){

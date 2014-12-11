@@ -1,6 +1,6 @@
 window.onload = function(){
     //=====VARIABLES=====
-  
+    
     // holds data sent to the server (keyboard input and player identification)
     var PlayerData = {
       // old: assignedPlayer

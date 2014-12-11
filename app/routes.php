@@ -28,3 +28,7 @@ Route::get('/results/{gameId}', 'InterfaceController@getResults');
 Route::get('/profile/{profileId?}', 'InterfaceController@getProfile');
 Route::get('/edit/profile', 'InterfaceController@getEditProfile');
 Route::post('/edit/profile', 'InterfaceController@postEditProfile');
+
+
+// Results Controller (not csrf or auth protect to allow data from node.js server)
+Route::post('/update/results', 'ResultsController@postUpdateResults');
