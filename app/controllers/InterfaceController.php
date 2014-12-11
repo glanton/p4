@@ -125,7 +125,13 @@ class InterfaceController extends BaseController {
             $user->current_game_authkey = 'not_in_game';
             $user->save();
             
-            return Redirect::to('/lobby');
+            // sign in new user and send to lobby
+            if (Auth::attempt(array('email' => Input::get('email'), 'password' => Input::get('password'))))
+            {
+                return Redirect::to('/lobby');
+            } else {
+                return Redirect::to('/lobby');
+            }
         }
         
         // on validation failure
