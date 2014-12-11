@@ -122,6 +122,7 @@ class InterfaceController extends BaseController {
             $user->email = Input::get('email');
             $user->password = Hash::make(Input::get('password')); //hash password for security
             $user->authkey = Input::get('username') . str_random(32);
+            $user->current_game_authkey = 'not_in_game';
             $user->save();
             
             return Redirect::to('/lobby');
