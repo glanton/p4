@@ -1,5 +1,8 @@
 // get base url from input on page
-var baseURL = "http://localhost:8888";
+// connect to node.js server
+// *****this code must be updated on live server*****
+// var baseURL = "http://localhost:8888";
+var baseURL = "http://p4.alex.me";
 
 // fake score data for testing... should match actual record in database
 var fakeScoreData = {
