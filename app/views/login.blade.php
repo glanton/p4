@@ -17,9 +17,12 @@
         @foreach($errors->all() as $message)
             <li>{{ $message }}</li>
         @endforeach
+        
+        @if (Session::get('loginError'))
+            <li>{{ Session::get('loginError') }}</li>
+        @endif
     </ul>
-    
-    
+        
     <p>login</p>
         
     {{ Form::open(array('id' => 'loginForm', 'url' => '/login', 'method' => 'POST')) }}
@@ -56,6 +59,12 @@
         
     {{ Form::close() }}
     
+@stop
+
+
+@section('inputs')
+    
+
 @stop
 
 

@@ -26,6 +26,12 @@
 @stop
 
 
+@section('inputs')
+    
+
+@stop
+
+
 @section('scripts')
     
     <script type="text/javascript" src='{{ asset('scripts/lobby.js') }}'></script>

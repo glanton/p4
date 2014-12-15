@@ -8,6 +8,15 @@
 
 @section('controls')
     
+    
+    <!-- only for testing purposes -->
+    {{ Form::open(array('id' => 'resetGame', 'url' => '/reset/game', 'method' => 'POST')) }}
+        
+        {{ Form::submit('Reset Game') }}
+        
+    {{ Form::close() }}
+    
+    
 @stop
 
 
@@ -15,6 +24,14 @@
     
     <canvas id="gameBoard"></canvas>
     
+@stop
+
+
+@section('inputs')
+    
+    <input type="hidden" name="userAuthkey" id="userAuthkey" value="{{ Auth::user()->authkey; }}">
+    <input type="hidden" name="gameAuthkey" id="gameAuthkey" value="{{ Auth::user()->current_game_authkey; }}">
+
 @stop
 
 

@@ -37,8 +37,11 @@ class InterfaceController extends BaseController {
         if (Auth::attempt($credentials, $remember = false)) {
             return Redirect::intended('/lobby');
         } else {
+            
+            $loginError = 'Email and password combination invalid.';
+            
             return Redirect::to('/login')
-                ->with('flash_message', 'Log in failed.')
+                ->with('loginError', $loginError)
                 ->withInput();
         }
         

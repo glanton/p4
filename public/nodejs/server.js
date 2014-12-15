@@ -1,8 +1,8 @@
 // get base url from input on page
 // connect to node.js server
 // *****this code must be updated on live server*****
-// var baseURL = "http://localhost:8888";
-var baseURL = "http://p4.alex.me";
+var baseURL = "http://localhost:8888";
+// var baseURL = "http://p4.alex.me";
 
 // fake score data for testing... should match actual record in database
 var fakeScoreData = {
@@ -37,11 +37,16 @@ function sendScoresToDatabase (scoreData) {
    xhr.send(JSON.stringify(scoreData));
 }
 
+
+
+//===== VARIABLES =====
+//*********************
+
+// connection-related variables follow
 var http = require('http');
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 var io = require('socket.io');
 var url = require('url');
-
 var server = http.createServer(function(request, response){
    
    // read POST requests to build a new game based on request from laravel
@@ -50,8 +55,10 @@ var server = http.createServer(function(request, response){
       // receive new game data
       request.setEncoding("utf8");
       request.on("data", function(data){
-         // ***** use the json data to create a new game object and add to a master games list
-         console.log(data);
+         // use the json data to create a new game object and add to a master games list
+         var newGame = new Game(JSON.parse(data));
+         gamesList[newGame.authkey] = newGame;
+         console.log(gamesList);
       });
       
       response.writeHead(200, {"Content-Type" : "text/html"});
@@ -66,6 +73,9 @@ var server = http.createServer(function(request, response){
 server.listen(8734);
 console.log("listening on port 8734");
 var ioServer = io.listen(server);
+
+// establish object to hold all active games and their information (game connection info, player info, and game state info)
+var gamesList = {};
 
 // create empty player list when server starts
 var playerList = [];
@@ -83,10 +93,46 @@ var GameConstants = {
 }
 
 
+
+//===== CONSTRUCTION FUNCTIONS =====
+//**********************************
+
+// construction function for building a new game within the active games lists
+function Game (data) {
+   this.authkey = data.gameAuthkey;
+   this.interfaceId = data.gameInterfaceId;
+   this.users = data.users;
+
+}
+
+
+//===== WEBSOCKETS =====
+//**********************
+
 ioServer.sockets.on("connection", function(socket){
    
-   socket.on("join_new_game", function() {
-      console.log('in - ' + playerList.length);
+   socket.on("join_new_game", function(UserData) {
+      console.log("attempted connection by user authkey " + UserData.userAuthkey);
+      
+      // check game authkey against the active games lists
+      if (gamesList[UserData.gameAuthkey]) {
+         
+         // set game variable for further operations
+         var game = gamesList[UserData.gameAuthkey];
+         
+         // check user authkeys against the game's user list
+         for (var i = 0; i < game.users.length; i++) {
+            
+            if (game.users[i].userAuthkey === UserData.userAuthkey) {
+               
+               // set user variable for further operations
+               var user = game.users[i];
+               
+               // game authenticate; proceed
+               console.log ("User " + user.username + " (" + user.userAuthkey + ") authenticated in game " + game.authkey);
+            }
+         }
+      }
       
       GameData.currentPlayer = "";
    

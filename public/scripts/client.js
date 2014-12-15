@@ -1,5 +1,26 @@
 window.onload = function(){
     //=====VARIABLES=====
+    //*******************
+    
+    // get authkeys from hidden inputs
+    var userAuthkeyInput = document.getElementById("userAuthkey").value;
+    var gameAuthkeyInput = document.getElementById("gameAuthkey").value;
+    
+    // variable to store user data to be sent to server (keyboard inputs and game/player authentication)
+    var UserData = {
+        // user and game authkeys
+        userAuthkey : userAuthkeyInput,
+        gameAuthkey : gameAuthkeyInput,
+        
+        // key map (37: left, 38: up, 39: right, 40: down)
+      keyMap : {
+          37 : false,
+          38 : false,
+          39 : false,
+          40 : false
+      }
+    };
+    
     
     // holds data sent to the server (keyboard input and player identification)
     var PlayerData = {
@@ -31,11 +52,12 @@ window.onload = function(){
  
   
     //=====INIT CODE=====
+    //*******************
     
     // connect to node.js server
     // *****this code must be updated on live server*****
-    // var socket = io.connect('http://localhost:8734');
-    var socket = io.connect('http://104.131.10.181:8734/')
+    var socket = io.connect('http://localhost:8734');
+    // var socket = io.connect('http://104.131.10.181:8734/')
     
     // load ship sprite sheets
     addSpriteSheet("whiteShip", "http://alexfriberg.com/images/Tayak64.png");
@@ -84,7 +106,7 @@ window.onload = function(){
             // check if all resources have loaded
             GameResources.resourceLoadCount++;
             if (GameResources.resourceLoadCount == GameResources.resourceCount) {
-                socket.emit("join_new_game");
+                socket.emit("join_new_game", UserData);
             }
         };
     };
@@ -129,6 +151,7 @@ window.onload = function(){
  
    
   //======FUNCTIONS=====
+  //********************
   
   
     //******** review what information is on the server (should be position, rotation... anything else?)
