@@ -1,13 +1,35 @@
 window.onload = function(){
+    
+    //===== CONSTANTS =====
+    //*********************
+    
+    var SPRITE_DATA = {
+       framesPerSheet : 64, // must be perfect square
+       framesPerSheetSqRt : 8 // square root of total frames in a sheet
+    };
+    
+    
+    
     //=====VARIABLES=====
     //*******************
+    
+    // connect to node.js server
+    // *****this code must be updated on live server*****
+    var socket = io.connect('http://localhost:8734');
+    // var socket = io.connect('http://104.131.10.181:8734/')
+    
+    // get canvas element and set dimensions
+    var canvas = document.getElementById("gameBoard");
+    canvas.width = 480;
+    canvas.height = 320;
+    var ctx = canvas.getContext("2d");
     
     // get authkeys from hidden inputs
     var userAuthkeyInput = document.getElementById("userAuthkey").value;
     var gameAuthkeyInput = document.getElementById("gameAuthkey").value;
     
     // variable to store user data to be sent to server (keyboard inputs and game/player authentication)
-    var UserData = {
+    var userData = {
         // user and game authkeys
         userAuthkey : userAuthkeyInput,
         gameAuthkey : gameAuthkeyInput,
@@ -21,168 +43,146 @@ window.onload = function(){
       }
     };
     
-    
-    // holds data sent to the server (keyboard input and player identification)
-    var PlayerData = {
-      // old: assignedPlayer
-      playerID : '',
-      
-      // key map (37: left, 38: up, 39: right, 40: down)
-      keyMap : {
-          37 : false,
-          38 : false,
-          39 : false,
-          40 : false
-      }
-    };
-    
-    // game constants
-    var GameConstants = {
-        FRAMES_PER_SPRITE_SHEET: 64, // must be perfect square
-        SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET: 8
-    }
-    
     // holds image and canvas resources
-    var GameResources = {
+    var gameResources = {
         resourceCount : 0,
         resourceLoadCount : 0,
         spriteSheets : {}
     };
   
- 
   
-    //=====INIT CODE=====
-    //*******************
+  
+    //===== CONSTRUCTOR FUNCTIONS =====
+    //**********************************
     
-    // connect to node.js server
-    // *****this code must be updated on live server*****
-    var socket = io.connect('http://localhost:8734');
-    // var socket = io.connect('http://104.131.10.181:8734/')
-    
-    // load ship sprite sheets
-    addSpriteSheet("whiteShip", "http://alexfriberg.com/images/Tayak64.png");
-    addSpriteSheet("redShip", "http://alexfriberg.com/images/Tayak64Red.png");
-    
-    // function to add spritesheets as objects with an image, width, and height
+    // constructor function to build a new sprite sheet image
     function SpriteSheet (image){
         this.image = image;
         this.width = 0;
         this.height = 0;
     }
     
+     
+ 
+    //===== FUNCTIONS =====
+    //*********************
+ 
     // function to add image resources
     function addSpriteSheet (name, source){
         newSpriteSheet = new Image();
         newSpriteSheet.src = source;
-        GameResources.spriteSheets[name] = new SpriteSheet(newSpriteSheet)
+        gameResources.spriteSheets[name] = new SpriteSheet(newSpriteSheet)
     }
     
-    // get canvas element and set dimensions
-    var canvas = document.getElementById("gameBoard");
-    canvas.width = 480;
-    canvas.height = 320;
-    var ctx = canvas.getContext("2d");
+    
+    // function to request update from server and send current keyboard inputs
+    function requestUpdate(){
+        detectKeys();
+        socket.emit("client_requests_update", userData);
+    }
+    
+    
+    // function to detect and capture key input
+    function detectKeys () {
+        document.onkeydown = function(event){
+            if (event.keyCode in userData.keyMap){
+                userData.keyMap[event.keyCode] = true;
+            }
+        };
+    
+        document.onkeyup = function(event){
+            if (event.keyCode in userData.keyMap){
+                userData.keyMap[event.keyCode] = false;
+                // console.log(event.keyCode + " up");
+            }     
+        };
+    }
+  
+  
+    // function to clear canvas re-render all graphical objects
+    function renderGame (gameData) {
+        
+        // clear canvas in preparation for new frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // render each ship
+        for (var i = 0; i < gameData.ships.length; i++) {
+            
+          renderObject(gameData.ships[i]);
+        }
+    }
+    
+  
+    // function to render ships and other graphical objects
+    function renderObject (object) {
+        ctx.drawImage(
+            gameResources.spriteSheets[object.sprite].image,
+            object.xRotationIndex * gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt,
+            object.yRotationIndex * gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt,
+            gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt,
+            gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt,
+            object.xPos,
+            object.yPos,
+            gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt,
+            gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt);
+     };
+  
+  
+    //=====INIT CODE=====
+    //*******************
+    
+    // load ship sprite sheets
+    addSpriteSheet("whiteShip", "../images/Tayak64.png");
+    addSpriteSheet("redShip", "../images/Tayak64Red.png");
+    addSpriteSheet("greyShip", "../images/Tayak64Grey.png");
+    addSpriteSheet("coralShip", "../images/Tayak64Coral.png");
     
     // version two of resource loader
     // count total resources to be loaded
-    for (var spriteSheetI in GameResources.spriteSheets) {
-        if (GameResources.spriteSheets.hasOwnProperty(spriteSheetI)) {
-          GameResources.resourceCount++;
+    for (var spriteSheetI in gameResources.spriteSheets) {
+        if (gameResources.spriteSheets.hasOwnProperty(spriteSheetI)) {
+          gameResources.resourceCount += 1;
         }    
     }
     
     // compare resources loaded with total resources
-    for (var spriteSheetK in GameResources.spriteSheets) {
-        GameResources.spriteSheets[spriteSheetK].image.onload = checkLoadedResources(spriteSheetK);
+    for (var spriteSheetK in gameResources.spriteSheets) {
+        gameResources.spriteSheets[spriteSheetK].image.onload = checkLoadedResources(spriteSheetK);
     }
     
     function checkLoadedResources(spriteSheetK){
         return function () {
             // record width and height of sprite sheet
-            GameResources.spriteSheets[spriteSheetK].width = GameResources.spriteSheets[spriteSheetK].image.width;
-            GameResources.spriteSheets[spriteSheetK].height = GameResources.spriteSheets[spriteSheetK].image.height;
-            //console.log(GameResources.spriteSheets[spriteSheetK].image.width);
+            gameResources.spriteSheets[spriteSheetK].width = gameResources.spriteSheets[spriteSheetK].image.width;
+            gameResources.spriteSheets[spriteSheetK].height = gameResources.spriteSheets[spriteSheetK].image.height;
+            //console.log(gameResources.spriteSheets[spriteSheetK].image.width);
             
             // check if all resources have loaded
-            GameResources.resourceLoadCount++;
-            if (GameResources.resourceLoadCount == GameResources.resourceCount) {
-                socket.emit("join_new_game", UserData);
+            gameResources.resourceLoadCount++;
+            if (gameResources.resourceLoadCount == gameResources.resourceCount) {
+                socket.emit("client_requests_ready_state", userData);
             }
         };
     };
     
     
     
+    //===== WEBSOCKETS =====
+    //**********************
     
-    socket.on("assign_player", function(GameData){
-        // is this necessary if the client passes a unique ID as part of the join_new_game emit?
-        // yes, at least for now this is how we lock out the single game from extra people (if not on waitlist then loop requestUpdate)
-        PlayerData.playerID = GameData.currentPlayer;
-        console.log('Player assignment: ' + PlayerData.playerID);
-        
-        if (PlayerData.playerID == 'waiting') {
-            console.log('sorry, no available game');
-        } else {
-            // begin core game loop
+    // receive game ready state; when ready begin regular game loop
+    socket.on("server_sends_ready_state", function(gameReady){
+        if (gameReady) {
+            
             setInterval(requestUpdate, 1000/60);
         }
     });
     
-
     
-    function requestUpdate(){
-        detectKeys();
-        socket.emit("client_requests_update", PlayerData);
-    }
-    
-    socket.on("server_sends_update", function(GameData){
-        renderGame(GameData);
+    // render game upon receiving game data from server
+    socket.on("server_sends_update", function(gameData){
+        renderGame(gameData);
     });
-    
-    function renderGame (GameData) {
-        // clear canvas in preparation for new frame
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        for (var i = 0; i < GameData.ships.length; i++){
-          renderObject(GameData.ships[i]);
-        }
-    }
-
- 
-   
-  //======FUNCTIONS=====
-  //********************
-  
-  
-    //******** review what information is on the server (should be position, rotation... anything else?)
-    function renderObject (object) {
-        ctx.drawImage(
-            GameResources.spriteSheets[object.sprite].image,
-            object.xRotationIndex * GameResources.spriteSheets[object.sprite].width / GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET,
-            object.yRotationIndex * GameResources.spriteSheets[object.sprite].height / GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET,
-            GameResources.spriteSheets[object.sprite].width / GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET,
-            GameResources.spriteSheets[object.sprite].height / GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET,
-            object.xPos,
-            object.yPos,
-            GameResources.spriteSheets[object.sprite].width / GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET,
-            GameResources.spriteSheets[object.sprite].height / GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET);
-     };
-  
-  function detectKeys () {
-    document.onkeydown = function(event){
-      if (event.keyCode in PlayerData.keyMap){
-        PlayerData.keyMap[event.keyCode] = true;
-      }
-    };
-
-    document.onkeyup = function(event){
-      if (event.keyCode in PlayerData.keyMap){
-        PlayerData.keyMap[event.keyCode] = false;
-        // console.log(event.keyCode + " up");
-      }     
-    };
-  }
-  
 }
 
 

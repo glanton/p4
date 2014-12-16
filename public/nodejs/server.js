@@ -39,6 +39,24 @@ function sendScoresToDatabase (scoreData) {
 
 
 
+//===== CONSTANTS =====
+//*********************
+
+// constant that controls ship sprite used and ship's starting location/rotation
+var SHIP_STARTING_DATA = [
+   { sprite : "whiteShip", xPos : 100, yPos : 100, rotation : 0 },
+   { sprite : "redShip", xPos : 200, yPos : 200, rotation : 0 },
+   { sprite : "greyShip", xPos : 100, yPos : 200, rotation : 0 },
+   { sprite : "coralShip", xPos : 200, yPos : 100, rotation : 0 }
+];
+
+var SPRITE_DATA = {
+   framesPerSheet : 64, // must be perfect square
+   framesPerSheetSqRt : 8 // square root of total frames in a sheet
+};
+
+
+
 //===== VARIABLES =====
 //*********************
 
@@ -55,10 +73,14 @@ var server = http.createServer(function(request, response){
       // receive new game data
       request.setEncoding("utf8");
       request.on("data", function(data){
+         
          // use the json data to create a new game object and add to a master games list
          var newGame = new Game(JSON.parse(data));
          gamesList[newGame.authkey] = newGame;
          console.log(gamesList);
+         
+         // build new game starting state
+         buildNewGame(gamesList[newGame.authkey]);
       });
       
       response.writeHead(200, {"Content-Type" : "text/html"});
@@ -76,33 +98,101 @@ var ioServer = io.listen(server);
 
 // establish object to hold all active games and their information (game connection info, player info, and game state info)
 var gamesList = {};
-
-// create empty player list when server starts
-var playerList = [];
-
-// holds current state of game including ships, weapons, and score... everything needed to render a frame
-var GameData = {
-  ships : [],
-  currentPlayer : ""
-};
   
-// game constants
-var GameConstants = {
-   FRAMES_PER_SPRITE_SHEET: 64, // must be perfect square
-   SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET: 8
+
+
+//===== CONSTRUCTOR FUNCTIONS =====
+//**********************************
+
+// constructor function for building a new game within the active games lists
+function Game (data) {
+   
+   this.authkey = data.gameAuthkey;
+   this.interfaceId = data.gameInterfaceId;
+   this.users = data.users;
+}
+
+// constructor function for building a new ship (also contains method for updating ship in game)
+function Ship (name, sprite, xPos, yPos, rotation, speed, acceleration) {
+   this.name = name;
+   this.sprite = sprite;
+   this.xPos = xPos;
+   this.yPos = yPos;
+   this.rotation = rotation;
+   this.xRotationIndex = 0;
+   this.yRotationIndex = 0;
+   this.speed = speed;
+   this.acceleration = acceleration;
+
+this.update = function () {
+   // update sprite of ship based on rotation
+   var sequentialFrameIndex = parseInt(this.rotation / (360 / SPRITE_DATA.framesPerSheet));
+   this.xRotationIndex = sequentialFrameIndex % SPRITE_DATA.framesPerSheetSqRt;
+   this.yRotationIndex = parseInt(sequentialFrameIndex / SPRITE_DATA.framesPerSheetSqRt);
+ 
+   // update position of ship based on speed and rotation
+   if (this.speed > 0) {
+      this.xPos = this.xPos + (Math.sin(this.rotation * (Math.PI/180)) * this.speed);
+      this.yPos = this.yPos + (Math.cos(this.rotation * (Math.PI/180)) * -this.speed);
+   }
+  };
+
 }
 
 
 
-//===== CONSTRUCTION FUNCTIONS =====
-//**********************************
+//===== FUNCTIONS =====
+//*********************
 
-// construction function for building a new game within the active games lists
-function Game (data) {
-   this.authkey = data.gameAuthkey;
-   this.interfaceId = data.gameInterfaceId;
-   this.users = data.users;
+// build new game when start game request first received from laravel
+function buildNewGame (newGame) {
+   
+   // add game data object to new game object and add ships array to data object
+   newGame.data = {};
+   newGame.data.ships = [];
+   
+   // assign ship to each user
+   for (var i = 0; i < newGame.users.length; i++) {
+      
+      newGame.data.ships[i] = new Ship(newGame.users[i].username, SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1)
+   }
+}
 
+
+// function to authenticate user data requests to the server
+function authenticateUser (userData) {
+
+   // object to be returned with game and user information
+   var clientRequest = {};
+ 
+   // check game authkey against the active games lists
+   if (gamesList[userData.gameAuthkey]) {
+      
+      // set game variable for further operations
+      clientRequest.game = gamesList[userData.gameAuthkey];
+       
+      // check user authkeys against the game's user list
+      for (var i = 0; i < clientRequest.game.users.length; i++) {
+        
+         if (clientRequest.game.users[i].userAuthkey === userData.userAuthkey) {
+            
+            // set user variable for further operations
+            clientRequest.user = clientRequest.game.users[i];
+               
+            // game authenticate; proceed
+            // console.log ("User " + clientRequest.user.username + " (" + clientRequest.user.userAuthkey + ") authenticated in game " + clientRequest.game.authkey);
+      
+            // return authenticated information associated with this client
+            return clientRequest;
+         } 
+      }
+      
+      // if none of the users match return false
+      return false;
+   } else {
+ 
+      return false;
+   }
 }
 
 
@@ -111,119 +201,71 @@ function Game (data) {
 
 ioServer.sockets.on("connection", function(socket){
    
-   socket.on("join_new_game", function(UserData) {
-      console.log("attempted connection by user authkey " + UserData.userAuthkey);
+   // will become the ready function when interface is added for each player to ready... in the meantime just authenticates and returns data
+   socket.on("client_requests_ready_state", function(userData) {
+      console.log("attempted connection by user authkey " + userData.userAuthkey);
       
-      // check game authkey against the active games lists
-      if (gamesList[UserData.gameAuthkey]) {
+      // authenticate use and return clientRequest containing game and user objects; otherwise return false
+      var clientRequest = authenticateUser(userData);
+      
+      // if game and user authenticated
+      if (clientRequest) {
          
-         // set game variable for further operations
-         var game = gamesList[UserData.gameAuthkey];
+         // eventually make this a check to see if all users are ready and if so set to true (for now only set to true)
+         var readyState = true;
          
-         // check user authkeys against the game's user list
-         for (var i = 0; i < game.users.length; i++) {
+         socket.emit('server_sends_ready_state', readyState);  
+      }
+   });
+   
+   
+   socket.on('client_requests_update', function(userData){
+      
+      // authenticate use and return clientRequest containing game and user objects; otherwise return false
+      var clientRequest = authenticateUser(userData);
+      
+      // if game and user authenticated
+      if (clientRequest) {
+         
+         // search through ships to find user's ship
+         for (var i = 0; i < clientRequest.game.data.ships.length; i++) {
             
-            if (game.users[i].userAuthkey === UserData.userAuthkey) {
+            if (clientRequest.game.data.ships[i].name === clientRequest.user.username) {
                
-               // set user variable for further operations
-               var user = game.users[i];
-               
-               // game authenticate; proceed
-               console.log ("User " + user.username + " (" + user.userAuthkey + ") authenticated in game " + game.authkey);
+               // save user's ship for easy access
+               var userShip = clientRequest.game.data.ships[i];
             }
          }
-      }
+         
+         // rotate user ship counter-clockwise
+         if (userData.keyMap[37]) {
+            
+            rotateObject(userShip, -6);
+         }
+         
+         // accelerate user ship
+         if (userData.keyMap[38]) {
+            
+            accelerateObject(userShip);
+         }
+         
+         // rotate user ship clockwise
+         if (userData.keyMap[39]) {
+            
+            rotateObject(userShip, 6);
+         }
+         
+         // deccelerate user ship
+         if (userData.keyMap[40]) {
+            
+            deccelerateObject(userShip);
+         }
+         
+         // run complete update of all game objects
+         updateGame(clientRequest.game);
       
-      GameData.currentPlayer = "";
-   
-      // if player list empty assign player one to first connection
-      if (playerList.length == 0) {
-         playerList[0] = 'playerOne';
-         GameData.currentPlayer = playerList[0];
-         
-         // create player one ship
-         GameData.ships[0] = new Ship("playerOneShip", "whiteShip", 100, 100, 0, 0, 0.1);
-         
-      // if player list has one player assign player two to second connection
-      } else if (playerList.length == 1) {
-         playerList[1] = 'playerTwo';
-         GameData.currentPlayer = playerList[1];
-         
-         // create player two ship
-         GameData.ships[1] = new Ship("playerTwoShip", "redShip", 200, 200, 45, 0.2, 0.1);
-         
-      // if player list has two players assign waiting code to all other connections
-      } else {
-         GameData.currentPlayer = 'waiting';
-      }
-      
-      socket.emit('assign_player', GameData);  
-   });
-   
-   socket.on("client_sends_sprite_data", function(NewGameData){
-      //GameData = SentGameData;
-      console.log(NewGameData);
-   });
-   
-   socket.on('client_requests_update', function(PlayerData){
-      // adjust player directions based on sent player data
-      if (PlayerData.playerID == 'playerOne') {
-         
-          if (PlayerData.keyMap[37]){
-               // rotate left
-               //console.log("37: " + keyMap[37]);
-               rotateObject(GameData.ships[0], -6);
-          }
-          
-          if (PlayerData.keyMap[38]){
-               // accelerate
-               //console.log("38: " + keyMap[38]);
-               accelerateObject(GameData.ships[0]);
-          }
-      
-          if (PlayerData.keyMap[39]){
-               // rotate right
-               //console.log("39: " + keyMap[39]);
-               rotateObject(GameData.ships[0], 6);
-          }
-          
-          if (PlayerData.keyMap[40]){
-               // deccelerate
-               //console.log("40: " + keyMap[40]);
-               deccelerateObject(GameData.ships[0]);
-          }
-         
-      } else if (PlayerData.playerID == 'playerTwo') {
-         
-          if (PlayerData.keyMap[37]){
-               // rotate left
-               //console.log("37: " + keyMap[37]);
-               rotateObject(GameData.ships[1], -6);
-          }
-          
-          if (PlayerData.keyMap[38]){
-               // accelerate
-               //console.log("38: " + keyMap[38]);
-               accelerateObject(GameData.ships[1]);
-          }
-      
-          if (PlayerData.keyMap[39]){
-               // rotate right
-               //console.log("39: " + keyMap[39]);
-               rotateObject(GameData.ships[1], 6);
-          }
-          
-          if (PlayerData.keyMap[40]){
-               // deccelerate
-               //console.log("40: " + keyMap[40]);
-               deccelerateObject(GameData.ships[1]);
-          }
-         
-      }
-      
-      updateGame();
-      
-      socket.emit('server_sends_update', GameData);
+         socket.emit('server_sends_update', clientRequest.game.data);
+      }   
    });
    
    
@@ -254,40 +296,11 @@ ioServer.sockets.on("connection", function(socket){
          // console.log(object.rotation);
     }
     
-    function updateGame () {
-      for (var i = 0; i < GameData.ships.length; i++){
-        GameData.ships[i].update();
+    function updateGame (game) {
+      for (var i = 0; i < game.data.ships.length; i++){
+        game.data.ships[i].update();
       }
     }
-   
-   
-     //=====CONSTRUCTOR FUNCTIONS=====
-  
-      function Ship (name, sprite, xPos, yPos, rotation, speed, acceleration) {
-         this.name = name;
-         this.sprite = sprite;
-         this.xPos = xPos;
-         this.yPos = yPos;
-         this.rotation = rotation;
-         this.xRotationIndex = 0;
-         this.yRotationIndex = 0;
-         this.speed = speed;
-         this.acceleration = acceleration;
-    
-      this.update = function () {
-         // update sprite of ship based on rotation
-         var sequentialFrameIndex = parseInt(this.rotation / (360 / GameConstants.FRAMES_PER_SPRITE_SHEET));
-         this.xRotationIndex = sequentialFrameIndex % GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET;
-         this.yRotationIndex = parseInt(sequentialFrameIndex / GameConstants.SQUARE_ROOT_FRAMES_PER_SPRITE_SHEET);
-       
-         // update position of ship based on speed and rotation
-         if (this.speed > 0) {
-            this.xPos = this.xPos + (Math.sin(this.rotation * (Math.PI/180)) * this.speed);
-            this.yPos = this.yPos + (Math.cos(this.rotation * (Math.PI/180)) * -this.speed);
-         }
-        };
-    
-      }
 });
 
 
