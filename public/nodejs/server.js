@@ -42,12 +42,18 @@ function sendScoresToDatabase (scoreData) {
 //===== CONSTANTS =====
 //*********************
 
+// width and height of playable area
+var PLAY_FIELD = {
+   width : 960,
+   height : 640
+};
+
 // constant that controls ship sprite used and ship's starting location/rotation
 var SHIP_STARTING_DATA = [
-   { sprite : "whiteShip", xPos : 100, yPos : 100, rotation : 0 },
-   { sprite : "redShip", xPos : 200, yPos : 200, rotation : 0 },
-   { sprite : "greyShip", xPos : 100, yPos : 200, rotation : 0 },
-   { sprite : "coralShip", xPos : 200, yPos : 100, rotation : 0 }
+   { sprite : "whiteShip", radius : 30, xPos : 100, yPos : 100, rotation : 0 },
+   { sprite : "redShip", radius : 30, xPos : 200, yPos : 200, rotation : 0 },
+   { sprite : "greyShip", radius : 30, xPos : 100, yPos : 200, rotation : 0 },
+   { sprite : "coralShip", radius : 30, xPos : 200, yPos : 100, rotation : 0 }
 ];
 
 var SPRITE_DATA = {
@@ -113,9 +119,11 @@ function Game (data) {
 }
 
 // constructor function for building a new ship (also contains method for updating ship in game)
-function Ship (name, sprite, xPos, yPos, rotation, speed, acceleration) {
+function Ship (name, sprite, radius, xPos, yPos, rotation, speed, acceleration) {
+   
    this.name = name;
    this.sprite = sprite;
+   this.radius = radius;
    this.xPos = xPos;
    this.yPos = yPos;
    this.rotation = rotation;
@@ -123,20 +131,6 @@ function Ship (name, sprite, xPos, yPos, rotation, speed, acceleration) {
    this.yRotationIndex = 0;
    this.speed = speed;
    this.acceleration = acceleration;
-
-this.update = function () {
-   // update sprite of ship based on rotation
-   var sequentialFrameIndex = parseInt(this.rotation / (360 / SPRITE_DATA.framesPerSheet));
-   this.xRotationIndex = sequentialFrameIndex % SPRITE_DATA.framesPerSheetSqRt;
-   this.yRotationIndex = parseInt(sequentialFrameIndex / SPRITE_DATA.framesPerSheetSqRt);
- 
-   // update position of ship based on speed and rotation
-   if (this.speed > 0) {
-      this.xPos = this.xPos + (Math.sin(this.rotation * (Math.PI/180)) * this.speed);
-      this.yPos = this.yPos + (Math.cos(this.rotation * (Math.PI/180)) * -this.speed);
-   }
-  };
-
 }
 
 
@@ -154,7 +148,7 @@ function buildNewGame (newGame) {
    // assign ship to each user
    for (var i = 0; i < newGame.users.length; i++) {
       
-      newGame.data.ships[i] = new Ship(newGame.users[i].username, SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1)
+      newGame.data.ships[i] = new Ship(newGame.users[i].username, SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].radius, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1)
    }
 }
 
@@ -194,6 +188,43 @@ function authenticateUser (userData) {
       return false;
    }
 }
+
+
+// function to update sprite and position of ship and other objects
+function updateObject (object) {
+   
+   // update sprite of object based on rotation
+   var sequentialFrameIndex = parseInt(object.rotation / (360 / SPRITE_DATA.framesPerSheet));
+   object.xRotationIndex = sequentialFrameIndex % SPRITE_DATA.framesPerSheetSqRt;
+   object.yRotationIndex = parseInt(sequentialFrameIndex / SPRITE_DATA.framesPerSheetSqRt);
+ 
+   // update position of object based on speed and rotation
+   if (object.speed > 0) {
+      
+      object.xPos = object.xPos + (Math.sin(object.rotation * (Math.PI/180)) * object.speed);
+      object.yPos = object.yPos + (Math.cos(object.rotation * (Math.PI/180)) * -object.speed);
+   }
+   
+   // check object position against game field bounds and warp if necessary
+   // x check
+   if (object.xPos < (0 - object.radius)) {
+      
+      object.xPos = PLAY_FIELD.width + object.radius;
+   } else if (object.xPos > (PLAY_FIELD.width + object.radius)) {
+      
+      object.xPos = 0 - object.radius;
+   }
+   
+   // y check
+   if (object.yPos < (0 - object.radius)) {
+      
+      object.yPos = PLAY_FIELD.height + object.radius;
+   } else if (object.yPos > (PLAY_FIELD.height + object.radius)) {
+      
+      object.yPos = 0 - object.radius;
+   }
+}
+
 
 
 //===== WEBSOCKETS =====
@@ -298,7 +329,8 @@ ioServer.sockets.on("connection", function(socket){
     
     function updateGame (game) {
       for (var i = 0; i < game.data.ships.length; i++){
-        game.data.ships[i].update();
+         updateObject(game.data.ships[i]);
+        // game.data.ships[i].update();
       }
     }
 });

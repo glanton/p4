@@ -20,8 +20,8 @@ window.onload = function(){
     
     // get canvas element and set dimensions
     var canvas = document.getElementById("gameBoard");
-    canvas.width = 480;
-    canvas.height = 320;
+    canvas.width = 960;
+    canvas.height = 640;
     var ctx = canvas.getContext("2d");
     
     // get authkeys from hidden inputs
@@ -57,6 +57,7 @@ window.onload = function(){
     
     // constructor function to build a new sprite sheet image
     function SpriteSheet (image){
+        
         this.image = image;
         this.width = 0;
         this.height = 0;
@@ -69,6 +70,7 @@ window.onload = function(){
  
     // function to add image resources
     function addSpriteSheet (name, source){
+        
         newSpriteSheet = new Image();
         newSpriteSheet.src = source;
         gameResources.spriteSheets[name] = new SpriteSheet(newSpriteSheet)
@@ -77,6 +79,7 @@ window.onload = function(){
     
     // function to request update from server and send current keyboard inputs
     function requestUpdate(){
+        
         detectKeys();
         socket.emit("client_requests_update", userData);
     }
@@ -86,12 +89,16 @@ window.onload = function(){
     function detectKeys () {
         document.onkeydown = function(event){
             if (event.keyCode in userData.keyMap){
+                
+                // prevent default arrow key scrolling (among other defaults)
+                event.preventDefault();
                 userData.keyMap[event.keyCode] = true;
             }
         };
     
         document.onkeyup = function(event){
             if (event.keyCode in userData.keyMap){
+                
                 userData.keyMap[event.keyCode] = false;
                 // console.log(event.keyCode + " up");
             }     
@@ -115,16 +122,21 @@ window.onload = function(){
   
     // function to render ships and other graphical objects
     function renderObject (object) {
+        
+        // calculate width and height of a single frame of the sprite sheet
+        var frameWidth = gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt;
+        var frameHeight = gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt;
+        
         ctx.drawImage(
             gameResources.spriteSheets[object.sprite].image,
-            object.xRotationIndex * gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt,
-            object.yRotationIndex * gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt,
-            gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt,
-            gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt,
-            object.xPos,
-            object.yPos,
-            gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt,
-            gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt);
+            object.xRotationIndex * frameWidth,
+            object.yRotationIndex * frameHeight,
+            frameWidth,
+            frameHeight,
+            object.xPos - (frameWidth / 2),
+            object.yPos - (frameHeight / 2),
+            frameWidth,
+            frameHeight);
      };
   
   
