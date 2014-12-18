@@ -22,7 +22,10 @@
 
 @section('content')
     
-    <canvas id="gameBoard"></canvas>
+    <div id="gameSpace">
+        <canvas id="particleCanvas"></canvas>
+        <canvas id="spriteCanvas"></canvas>
+    </div>
     
 @stop
 

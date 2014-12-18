@@ -78,10 +78,20 @@ html, body {
 /********** styles for GAME view *********
 *****************************************/
 
-#gameBoard {
+#gameSpace {
+    width: 960px;
+    height: 640px;
     margin: 40px 0;
-    background-color: black;
     border: 20px solid #666666;
+    background-color: black;
+}
+
+#particleCanvas {
+    position: absolute;
+}
+
+#spriteCanvas {
+    position: absolute;
 }
 
 

@@ -18,11 +18,17 @@ window.onload = function(){
     var socket = io.connect('http://localhost:8734');
     // var socket = io.connect('http://104.131.10.181:8734/')
     
-    // get canvas element and set dimensions
-    var canvas = document.getElementById("gameBoard");
-    canvas.width = 960;
-    canvas.height = 640;
-    var ctx = canvas.getContext("2d");
+    // get particle canvas element and set dimensions
+    var particleCanvas = document.getElementById("particleCanvas");
+    particleCanvas.width = 960;
+    particleCanvas.height = 640;
+    var ctxP = particleCanvas.getContext("2d");
+    
+    // get sprite canvas element and set dimensions
+    var spriteCanvas = document.getElementById("spriteCanvas");
+    spriteCanvas.width = 960;
+    spriteCanvas.height = 640;
+    var ctxS = spriteCanvas.getContext("2d");
     
     // get authkeys from hidden inputs
     var userAuthkeyInput = document.getElementById("userAuthkey").value;
@@ -109,14 +115,19 @@ window.onload = function(){
     // function to clear canvas re-render all graphical objects
     function renderGame (gameData) {
         
-        // clear canvas in preparation for new frame
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // clear particle and sprite canvas in preparation for new frame
+        ctxP.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+        ctxS.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
         
         // render each ship
         for (var i = 0; i < gameData.ships.length; i++) {
             
           renderObject(gameData.ships[i]);
+          renderEngineTrail(gameData.ships[i]);
         }
+        
+        // blend particle canvas
+        ctxP.globalCompositeOperation = "lighter";
     }
     
   
@@ -127,7 +138,7 @@ window.onload = function(){
         var frameWidth = gameResources.spriteSheets[object.sprite].width / SPRITE_DATA.framesPerSheetSqRt;
         var frameHeight = gameResources.spriteSheets[object.sprite].height / SPRITE_DATA.framesPerSheetSqRt;
         
-        ctx.drawImage(
+        ctxS.drawImage(
             gameResources.spriteSheets[object.sprite].image,
             object.xRotationIndex * frameWidth,
             object.yRotationIndex * frameHeight,
@@ -137,7 +148,55 @@ window.onload = function(){
             object.yPos - (frameHeight / 2),
             frameWidth,
             frameHeight);
-     };
+     }
+     
+     
+     // function to render ship's engine trail based on historical points
+     function renderEngineTrail (object) {
+        
+        // control how many historical points are used
+        var points = object.history.slice(0, 50);
+        
+        // loop through points
+        for (var i = 0; i < points.length; i++) {
+            
+            // get current point
+            var point = points[i];
+            
+            // set size of trail according to ship speed and location in trail
+            var size = object.speed - (object.speed * i/50);
+            
+            // adjust offset for where trail starts from ship sprite; hardcoding offset for now--may need to adjust later to accomodate different sprites!
+            var xSpriteOffset = Math.sin(point.rotation * (Math.PI/180)) * 20;
+            var ySpriteOffset = Math.cos(point.rotation * (Math.PI/180)) * -20;
+            point.xPos = point.xPos - xSpriteOffset;
+            point.yPos = point.yPos - ySpriteOffset;
+                
+            // set random distribution of trail
+            var randomOffset = (Math.random() * 8) - 4;
+            var xAdjusted = point.xPos + randomOffset;
+            var yAdjusted = point.yPos + randomOffset;
+            
+            
+            // set opacity of trail accorindation to location in trail
+            var opacity = (1.5 - i/50).toFixed(2);
+            
+            // begin rendering
+            ctxP.beginPath();
+            
+            // establish gradient
+            var gradient = ctxP.createRadialGradient(point.xPos, point.yPos, 0, point.xPos, point.yPos, size);
+            gradient.addColorStop(0, "rgba(255, 255, 255, " + opacity + ")");
+            gradient.addColorStop(0.5, "rgba(255, 255, 255, " + opacity + ")");
+            gradient.addColorStop(0.7, "rgba(100, 200, 255, " + (opacity * 0.8) + ")");
+            gradient.addColorStop(1, "rgba(150, 20, 255, " + (opacity * 0.4) + ")");
+            
+            // render trail
+            ctxP.fillStyle = gradient;
+            ctxP.arc(xAdjusted, yAdjusted, size, Math.PI * 2, false);
+            ctxP.fill();
+        }
+     }
   
   
     //=====INIT CODE=====

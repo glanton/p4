@@ -50,10 +50,10 @@ var PLAY_FIELD = {
 
 // constant that controls ship sprite used and ship's starting location/rotation
 var SHIP_STARTING_DATA = [
-   { sprite : "whiteShip", radius : 30, xPos : 100, yPos : 100, rotation : 0 },
-   { sprite : "redShip", radius : 30, xPos : 200, yPos : 200, rotation : 0 },
-   { sprite : "greyShip", radius : 30, xPos : 100, yPos : 200, rotation : 0 },
-   { sprite : "coralShip", radius : 30, xPos : 200, yPos : 100, rotation : 0 }
+   { sprite : "whiteShip", radius : 25, xPos : 100, yPos : 100, rotation : 0 },
+   { sprite : "redShip", radius : 25, xPos : 200, yPos : 200, rotation : 0 },
+   { sprite : "greyShip", radius : 25, xPos : 100, yPos : 200, rotation : 0 },
+   { sprite : "coralShip", radius : 25, xPos : 200, yPos : 100, rotation : 0 }
 ];
 
 var SPRITE_DATA = {
@@ -119,9 +119,10 @@ function Game (data) {
 }
 
 // constructor function for building a new ship (also contains method for updating ship in game)
-function Ship (name, sprite, radius, xPos, yPos, rotation, speed, acceleration) {
+function Ship (name, type, sprite, radius, xPos, yPos, rotation, speed, acceleration) {
    
    this.name = name;
+   this.type = type;
    this.sprite = sprite;
    this.radius = radius;
    this.xPos = xPos;
@@ -131,6 +132,9 @@ function Ship (name, sprite, radius, xPos, yPos, rotation, speed, acceleration) 
    this.yRotationIndex = 0;
    this.speed = speed;
    this.acceleration = acceleration;
+   
+   // contains history of ship's last locations in an array
+   this.history = [];
 }
 
 
@@ -148,7 +152,7 @@ function buildNewGame (newGame) {
    // assign ship to each user
    for (var i = 0; i < newGame.users.length; i++) {
       
-      newGame.data.ships[i] = new Ship(newGame.users[i].username, SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].radius, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1)
+      newGame.data.ships[i] = new Ship(newGame.users[i].username, "ship", SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].radius, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1)
    }
 }
 
@@ -223,6 +227,25 @@ function updateObject (object) {
       
       object.yPos = 0 - object.radius;
    }
+   
+   // store object's current coordinates in history if it's a ship
+   if (object.type === "ship") {
+      
+      var historicalCoordinates = {
+         "xPos" : object.xPos,
+         "yPos" : object.yPos,
+         "rotation" : object.rotation
+      };
+   
+      // add current coordinates to the historical record
+      object.history.unshift(historicalCoordinates);
+      
+      // only store the last 100 histroical coordinates
+      if (object.history.length > 100) {
+         object.history.pop();
+      }
+   }
+   
 }
 
 
