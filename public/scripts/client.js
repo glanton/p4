@@ -40,13 +40,14 @@ window.onload = function(){
         userAuthkey : userAuthkeyInput,
         gameAuthkey : gameAuthkeyInput,
         
-        // key map (37: left, 38: up, 39: right, 40: down)
-      keyMap : {
-          37 : false,
-          38 : false,
-          39 : false,
-          40 : false
-      }
+        // key map (37: left, 38: up, 39: right, 40: down, 90: z)
+        keyMap : {
+            37 : false,
+            38 : false,
+            39 : false,
+            40 : false,
+            90 : false
+        }
     };
     
     // holds image and canvas resources
@@ -119,15 +120,35 @@ window.onload = function(){
         ctxP.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
         ctxS.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
         
-        // render each ship
+        // render each ship and its weapons
         for (var i = 0; i < gameData.ships.length; i++) {
+        
+            // only render ship and engine trail if status is living
+            if (gameData.ships[i].status === "living") {
+                
+                renderObject(gameData.ships[i]);
+                renderEngineTrail(gameData.ships[i]);
+            }
             
-          renderObject(gameData.ships[i]);
-          renderEngineTrail(gameData.ships[i]);
+            // always render weapons (which persist even after ship death)
+            renderPrimaryWeapon(gameData.ships[i]);
         }
         
         // blend particle canvas
         ctxP.globalCompositeOperation = "lighter";
+        
+        // debug text *&^*&^*&^*&^* DELETE WHEN COMPLETE *&*&^@#@)#*
+        renderDebugText(gameData.ships[0]);
+    }
+    
+    // ##%#%#%$& DEBUG FUNCTION ##*&#*&^*&@#$*&#$
+    function renderDebugText (object) {
+        
+        ctxS.font = "20px Arial";
+        ctxS.fillStyle = "white";
+        ctxS.fillText("xPos: " + object.xPos, 50, 50);
+        ctxS.fillText("yPos: " + object.yPos, 50, 80);
+        ctxS.fillText("speed: " + object.speed, 50, 110);
     }
     
   
@@ -148,12 +169,12 @@ window.onload = function(){
             object.yPos - (frameHeight / 2),
             frameWidth,
             frameHeight);
-     }
+    }
      
      
-     // function to render ship's engine trail based on historical points
-     function renderEngineTrail (object) {
-        
+    // function to render ship's engine trail based on historical points
+    function renderEngineTrail (object) {
+            
         // control how many historical points are used
         var points = object.history.slice(0, 50);
         
@@ -163,8 +184,12 @@ window.onload = function(){
             // get current point
             var point = points[i];
             
-            // set size of trail according to ship speed and location in trail
-            var size = object.speed - (object.speed * i/50);
+            // set size of trail according to ship speed and location in trail; set to zero if less than zero
+            var size = object.speed - (object.speed * i/49);
+            if (size < 0) {
+                
+                size = 0;
+            }
             
             // adjust offset for where trail starts from ship sprite; hardcoding offset for now--may need to adjust later to accomodate different sprites!
             var xSpriteOffset = Math.sin(point.rotation * (Math.PI/180)) * 20;
@@ -176,7 +201,6 @@ window.onload = function(){
             var randomOffset = (Math.random() * 8) - 4;
             var xAdjusted = point.xPos + randomOffset;
             var yAdjusted = point.yPos + randomOffset;
-            
             
             // set opacity of trail accorindation to location in trail
             var opacity = (1.5 - i/50).toFixed(2);
@@ -196,7 +220,42 @@ window.onload = function(){
             ctxP.arc(xAdjusted, yAdjusted, size, Math.PI * 2, false);
             ctxP.fill();
         }
-     }
+    }
+     
+     
+    // function to render ships' primary weapons
+    function renderPrimaryWeapon (object) {
+        
+        // get array pf primary weapon projectiles
+        var projectiles = object.primaryWeapon.projectiles;
+        
+        // loop through projectiles
+        for (var i = 0; i < projectiles.length; i++) {
+            
+            // get current projectile
+            var projectile = projectiles[i];
+            
+            // set line endpoint
+            var xLineOffset = Math.sin(projectile.rotation * (Math.PI/180)) * 5;
+            var yLineOffset = Math.cos(projectile.rotation * (Math.PI/180)) * -5;
+            var xPosLineEnd = projectile.xPos - xLineOffset;
+            var yPosLineEnd = projectile.yPos - yLineOffset;
+            
+            // set opacity
+            var opacity = 1.5 - (projectile.life / object.primaryWeapon.lifespan);
+            
+            // begin rendering
+            ctxP.beginPath();
+            
+            // render projectile
+            ctxP.strokeStyle = "rgba(255, 255, 100, " + opacity +")";
+            ctxP.lineWidth = 2;
+            ctxP.moveTo(projectile.xPos, projectile.yPos);
+            ctxP.lineTo(xPosLineEnd, yPosLineEnd);
+            // ctxP.arc(projectile.xPos, projectile.yPos, 2, Math.PI * 2, false);
+            ctxP.stroke();
+        }
+    }
   
   
     //=====INIT CODE=====

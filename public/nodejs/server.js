@@ -13,6 +13,7 @@ var fakeScoreData = {
    ]
 };
 
+
 // function to send score data to laravel to store in database
 // to be used when game has finished... wait for response true before loading results page
 function sendScoresToDatabase (scoreData) {
@@ -45,15 +46,16 @@ function sendScoresToDatabase (scoreData) {
 // width and height of playable area
 var PLAY_FIELD = {
    width : 960,
-   height : 640
+   height : 640,
+   transition : 25
 };
 
 // constant that controls ship sprite used and ship's starting location/rotation
 var SHIP_STARTING_DATA = [
-   { sprite : "whiteShip", radius : 25, xPos : 100, yPos : 100, rotation : 0 },
-   { sprite : "redShip", radius : 25, xPos : 200, yPos : 200, rotation : 0 },
-   { sprite : "greyShip", radius : 25, xPos : 100, yPos : 200, rotation : 0 },
-   { sprite : "coralShip", radius : 25, xPos : 200, yPos : 100, rotation : 0 }
+   { sprite : "whiteShip", xPos : 100, yPos : 100, rotation : 0 },
+   { sprite : "redShip", xPos : 200, yPos : 200, rotation : 0 },
+   { sprite : "greyShip", xPos : 100, yPos : 200, rotation : 0 },
+   { sprite : "coralShip", xPos : 200, yPos : 100, rotation : 0 }
 ];
 
 var SPRITE_DATA = {
@@ -74,7 +76,7 @@ var url = require('url');
 var server = http.createServer(function(request, response){
    
    // read POST requests to build a new game based on request from laravel
-   if (request.method == "POST" && request.url == "/build/game/on/server") {
+   if (request.method === "POST" && request.url === "/build/game/on/server") {
       
       // receive new game data
       request.setEncoding("utf8");
@@ -119,12 +121,11 @@ function Game (data) {
 }
 
 // constructor function for building a new ship (also contains method for updating ship in game)
-function Ship (name, type, sprite, radius, xPos, yPos, rotation, speed, acceleration) {
+function Ship (name, type, sprite, xPos, yPos, rotation, speed, acceleration) {
    
    this.name = name;
    this.type = type;
    this.sprite = sprite;
-   this.radius = radius;
    this.xPos = xPos;
    this.yPos = yPos;
    this.rotation = rotation;
@@ -133,8 +134,55 @@ function Ship (name, type, sprite, radius, xPos, yPos, rotation, speed, accelera
    this.speed = speed;
    this.acceleration = acceleration;
    
+   // life, death, and spawning properties
+   this.health = 100;
+   this.status = "living";
+   this.respawnCount = 0;
+   
    // contains history of ship's last locations in an array
    this.history = [];
+   
+   // contains information about ship's primary weapon
+   this.primaryWeapon = {
+      type : "weapon",
+      damage : 5,
+      speed : 8,
+      rate : 6,
+      cooldown : 0,
+      lifespan : 30,
+      projectiles : []
+   };
+}
+
+
+// constructor function for building projectiles fired from a ship
+function Projectile (ship, xOffset, yOffset) {
+   
+   this.xPos = ship.xPos;
+   this.yPos = ship.yPos;
+   this.rotation = ship.rotation;
+   this.speed = ship.primaryWeapon.speed + ship.speed;
+   this.life = 0;
+   
+   // set xPos, accounting for xOffset, if applicable
+   if (xOffset) {
+      
+      var xOffsetX = Math.sin((this.rotation + 90) * (Math.PI/180)) * xOffset;
+      var xOffsetY = Math.cos((this.rotation + 90) * (Math.PI/180)) * -xOffset;
+      
+      this.xPos = this.xPos + xOffsetX;
+      this.yPos = this.yPos + xOffsetY;
+   }
+   
+   // set yPos, accounting for yOffset, if applicable
+   if (yOffset) {
+      
+      var yOffsetX = Math.sin(this.rotation * (Math.PI/180)) * yOffset;
+      var yOffsetY = Math.cos(this.rotation * (Math.PI/180)) * -yOffset;
+      
+      this.xPos = this.xPos + yOffsetX;
+      this.yPos = this.yPos + yOffsetY;
+   }
 }
 
 
@@ -152,7 +200,7 @@ function buildNewGame (newGame) {
    // assign ship to each user
    for (var i = 0; i < newGame.users.length; i++) {
       
-      newGame.data.ships[i] = new Ship(newGame.users[i].username, "ship", SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].radius, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1)
+      newGame.data.ships[i] = new Ship(newGame.users[i].username, "ship", SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1);
    }
 }
 
@@ -194,14 +242,78 @@ function authenticateUser (userData) {
 }
 
 
-// function to update sprite and position of ship and other objects
-function updateObject (object) {
+// update all game objects (currently just ships and weapons)
+function updateGame (game) {
    
-   // update sprite of object based on rotation
-   var sequentialFrameIndex = parseInt(object.rotation / (360 / SPRITE_DATA.framesPerSheet));
-   object.xRotationIndex = sequentialFrameIndex % SPRITE_DATA.framesPerSheetSqRt;
-   object.yRotationIndex = parseInt(sequentialFrameIndex / SPRITE_DATA.framesPerSheetSqRt);
- 
+   // update statuses, ships and weapons
+   for (var i = 0; i < game.data.ships.length; i++){
+      
+      controlShipStatus(game.data.ships[i]);
+      updateShip(game.data.ships[i]);
+      updateWeapon(game.data.ships[i].primaryWeapon, i, game.data.ships); 
+   }
+}
+
+
+// function to control status of a ship (this function maps out the lifecycle conditions of a ship from living to dying to respawning)
+function controlShipStatus (shipObject) {
+   
+   // if ship status is living
+   if (shipObject.status === "living") {
+      
+      // if ship's health reaches zero, change status to dead
+      if (shipObject.health <= 0) {
+         
+         // set status to dead and respawn count to five seconds
+         shipObject.status = "dead";
+         shipObject.respawnCount = 300;
+      }
+
+   // if ship status is dead
+   } else if (shipObject.status === "dead") {
+      
+      // if ship's respawn not at zero, count down
+      if (shipObject.respawnCount > 0) {
+         
+         // decrement respawn count by one
+         shipObject.respawnCount -= 1;
+         
+      // if ship's respawn count reaches zero, change status to spawning   
+      } else if (shipObject.respawnCount <= 0) {
+         
+         // set status to spawning
+         shipObject.status = "spawning";
+      }
+
+   // if ship status is spawning
+   } else if (shipObject.status === "spawning") {
+      
+      // set status to living
+      shipObject.status = "living";
+      
+      // reset ship
+      resetShip(shipObject);
+   }
+}
+
+
+// function to reset ship when respawning
+function resetShip (shipObject) {
+   
+   shipObject.xPos = Math.random() * PLAY_FIELD.width;
+   shipObject.yPos = Math.random() * PLAY_FIELD.height;
+   shipObject.rotation = 0;
+   shipObject.speed = 0;   
+   shipObject.health = 100;
+   
+   // reset ship's history
+   this.history = [];
+}
+
+
+// function to move object (ship or weapon)
+function moveObject (object) {
+   
    // update position of object based on speed and rotation
    if (object.speed > 0) {
       
@@ -211,41 +323,188 @@ function updateObject (object) {
    
    // check object position against game field bounds and warp if necessary
    // x check
-   if (object.xPos < (0 - object.radius)) {
+   if (object.xPos < (0 - PLAY_FIELD.transition)) {
       
-      object.xPos = PLAY_FIELD.width + object.radius;
-   } else if (object.xPos > (PLAY_FIELD.width + object.radius)) {
+      object.xPos = PLAY_FIELD.width + PLAY_FIELD.transition;
+   } else if (object.xPos > (PLAY_FIELD.width + PLAY_FIELD.transition)) {
       
-      object.xPos = 0 - object.radius;
+      object.xPos = 0 - PLAY_FIELD.transition;
    }
    
    // y check
-   if (object.yPos < (0 - object.radius)) {
+   if (object.yPos < (0 - PLAY_FIELD.transition)) {
       
-      object.yPos = PLAY_FIELD.height + object.radius;
-   } else if (object.yPos > (PLAY_FIELD.height + object.radius)) {
+      object.yPos = PLAY_FIELD.height + PLAY_FIELD.transition;
+   } else if (object.yPos > (PLAY_FIELD.height + PLAY_FIELD.transition)) {
       
-      object.yPos = 0 - object.radius;
+      object.yPos = 0 - PLAY_FIELD.transition;
    }
    
-   // store object's current coordinates in history if it's a ship
-   if (object.type === "ship") {
+   // round speed and position to 2 decimal places
+   object.speed = Math.round(object.speed * 100) / 100;
+   object.xPos = Math.round(object.xPos * 100) / 100;
+   object.yPos = Math.round(object.yPos * 100) / 100;
+}
+
+
+// function to update sprite and position of ships
+function updateShip (shipObject) {
+    
+   // update ship if living
+   if (shipObject.status === "living") {
       
+      // move ship
+      moveObject(shipObject);
+      
+      // update sprite of object based on rotation if type is one that uses sprites
+      var sequentialFrameIndex = parseInt(shipObject.rotation / (360 / SPRITE_DATA.framesPerSheet));
+      shipObject.xRotationIndex = sequentialFrameIndex % SPRITE_DATA.framesPerSheetSqRt;
+      shipObject.yRotationIndex = parseInt(sequentialFrameIndex / SPRITE_DATA.framesPerSheetSqRt);
+      
+      // store object's current coordinates in history if it's a ship
       var historicalCoordinates = {
-         "xPos" : object.xPos,
-         "yPos" : object.yPos,
-         "rotation" : object.rotation
+         "xPos" : shipObject.xPos,
+         "yPos" : shipObject.yPos,
+         "rotation" : shipObject.rotation
       };
-   
+      
       // add current coordinates to the historical record
-      object.history.unshift(historicalCoordinates);
+      shipObject.history.unshift(historicalCoordinates);
       
       // only store the last 100 histroical coordinates
-      if (object.history.length > 100) {
-         object.history.pop();
+      if (shipObject.history.length > 100) {
+         shipObject.history.pop();
       }
    }
+}
+
+
+// function to update sprite and position of ship and other objects
+function updateWeapon (weaponObject, firingShipIndex, shipsArray) {
    
+   // get projectiles array
+   var projectiles = weaponObject.projectiles;
+   
+   // move, check collision, and  check the lifestpan each weapon's projectile
+   for (var i = 0; i < projectiles.length; i++) {
+      
+      // initialize collision flag for skipping lifespan check if activated
+      var collisionFlag = false;
+      
+      // move projectile
+      moveObject(projectiles[i]);
+      
+      // loop through enemey ships to check collision
+      for (var k = 0; k < shipsArray.length; k++) {
+         
+         // only count collisions with enemy ships (ships that aren't the firing ship)
+         if (k != firingShipIndex) {
+            
+            // if collision, delete projectile and apply damage
+            if (calculateDistance(projectiles[i], shipsArray[k]) <= 20) {
+               
+               // delete projectile element in projectiles array
+               projectiles.splice(i, 1);
+               i -=1;
+               
+               // activate collision flag
+               collisionFlag = true;
+               
+               // apply damage against ship's health
+               shipsArray[k].health -= weaponObject.damage;
+            }
+         }
+      }
+      
+      // only check lifespan if collision flag is inactive
+      if (collisionFlag === false) {
+         
+         // check lifespan of projectile and delete if reached
+         if (projectiles[i].life >= weaponObject.lifespan) {
+            
+            // delete projectile element in projectiles array
+            projectiles.splice(i, 1);
+            i -= 1;
+         } else {
+            
+            // add count to projectile's life
+            projectiles[i].life += 1;
+         }
+      } 
+   }
+   
+   // update weapon cooldown
+   if (weaponObject.cooldown > 0) {
+      
+      weaponObject.cooldown -= 1;
+   }
+}
+
+
+// function to calculate distance between two objects
+function calculateDistance (objectOne, objectTwo) {
+   
+   var xComponent = Math.pow(objectOne.xPos - objectTwo.xPos, 2);
+   var yComponent = Math.pow(objectOne.yPos - objectTwo.yPos, 2);
+   var distance = Math.sqrt(xComponent + yComponent);
+   
+   return distance;
+}
+
+
+// accelerate object using its acceleration value
+function accelerateObject (object) {
+   
+      object.speed = object.speed + object.acceleration;
+}
+
+
+// deccelerate object using its acceleration value
+function deccelerateObject (object) {
+      
+   object.speed = object.speed - object.acceleration;
+   
+   // set speed to zero if less than zero
+   if (object.speed < 0) {
+      
+      object.speed = 0;
+   }
+}
+ 
+ 
+// rotate object using the passed degree change; may need to establish ship-based value later
+function rotateObject (object, degreeChange) {
+      var newOrient = object.rotation + degreeChange;
+  
+      // if the new degree of orientation falls outside normal bounds (0-360)
+      if (newOrient < 0){
+        newOrient = newOrient + 360;
+      } else if (newOrient >= 360){
+        newOrient = newOrient - 360;
+      }
+      
+      object.rotation = newOrient;
+      // console.log(object.rotation);
+}
+ 
+ 
+// fire primary weapon
+function firePrimaryWeapon(userShip) {
+   
+   // only fire if not on cooldown
+   if (userShip.primaryWeapon.cooldown === 0) {
+      
+      // build new weapon projectiles
+      var projectileLeft = new Projectile(userShip, 12, 10);
+      var projectileRight = new Projectile(userShip, -12, 10);
+   
+      // add projectiles to list of ship's projectiles
+      userShip.primaryWeapon.projectiles.push(projectileLeft);
+      userShip.primaryWeapon.projectiles.push(projectileRight);
+      
+      // reset cooldown
+      userShip.primaryWeapon.cooldown = userShip.primaryWeapon.rate;
+   }
 }
 
 
@@ -281,20 +540,23 @@ ioServer.sockets.on("connection", function(socket){
       // if game and user authenticated
       if (clientRequest) {
          
+         // initialize variable to store user ship object
+         var userShip;
+         
          // search through ships to find user's ship
          for (var i = 0; i < clientRequest.game.data.ships.length; i++) {
             
             if (clientRequest.game.data.ships[i].name === clientRequest.user.username) {
                
                // save user's ship for easy access
-               var userShip = clientRequest.game.data.ships[i];
+               userShip = clientRequest.game.data.ships[i];
             }
          }
          
          // rotate user ship counter-clockwise
          if (userData.keyMap[37]) {
             
-            rotateObject(userShip, -6);
+            rotateObject(userShip, -5.625/2);
          }
          
          // accelerate user ship
@@ -306,7 +568,7 @@ ioServer.sockets.on("connection", function(socket){
          // rotate user ship clockwise
          if (userData.keyMap[39]) {
             
-            rotateObject(userShip, 6);
+            rotateObject(userShip, 5.625/2);
          }
          
          // deccelerate user ship
@@ -315,47 +577,18 @@ ioServer.sockets.on("connection", function(socket){
             deccelerateObject(userShip);
          }
          
+         // fire primary weapon from user ship
+         if (userData.keyMap[90]) {
+            
+            firePrimaryWeapon(userShip);
+         }
+         
          // run complete update of all game objects
          updateGame(clientRequest.game);
       
          socket.emit('server_sends_update', clientRequest.game.data);
       }   
    });
-   
-   
-   
-   // *****FUNCTIONS*****
-   
-   function accelerateObject (object) {
-         object.speed = object.speed + object.acceleration;
-    }
-  
-    function deccelerateObject (object) {
-         if (object.speed > 0) {
-           object.speed = object.speed - object.acceleration;
-         }
-    }
-    
-    function rotateObject (object, degreeChange) {
-         var newOrient = object.rotation + degreeChange;
-     
-         // if the new degree of orientation falls outside normal bounds (0-360)
-         if (newOrient < 0){
-           newOrient = newOrient + 360;
-         } else if (newOrient >= 360){
-           newOrient = newOrient - 360;
-         }
-         
-         object.rotation = newOrient;
-         // console.log(object.rotation);
-    }
-    
-    function updateGame (game) {
-      for (var i = 0; i < game.data.ships.length; i++){
-         updateObject(game.data.ships[i]);
-        // game.data.ships[i].update();
-      }
-    }
 });
 
 
