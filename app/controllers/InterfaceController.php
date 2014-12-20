@@ -479,7 +479,7 @@ class InterfaceController extends BaseController {
     /*=====
     getResults
     =====*/  
-    public function getResults($gameId) {
+    public function getResults($interfaceId) {
         return View::make('results');
     }
      

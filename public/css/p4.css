@@ -81,8 +81,8 @@ html, body {
 #gameSpace {
     width: 960px;
     height: 640px;
-    margin: 40px 0;
-    border: 20px solid #666666;
+    margin: 40px 20px;
+    border: 4px double #dddd77;
     background-color: black;
 }
 

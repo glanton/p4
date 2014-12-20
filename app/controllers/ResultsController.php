@@ -53,7 +53,7 @@ class ResultsController extends BaseController {
                     $game->save();
                     
                     // return true
-                    $updateResults = array('updateResults' => 'true');
+                    $updateResults = array('resultsProcessed' => 'true');
                 }
             }
         }

@@ -4,40 +4,6 @@
 var baseURL = "http://localhost:8888";
 // var baseURL = "http://p4.alex.me";
 
-// fake score data for testing... should match actual record in database
-var fakeScoreData = {
-   gameAuthkey : "kKS5tvIMJD88m78xnpzdCCJa2z3tNkXx",
-   users : [
-      {userAuthkey : "globoxTqk99rbBRMYmLFbfE7WHxu1e0RPy4WnD", kills : 40, assists : 5, deaths : 14, victory : false},
-      {userAuthkey : "raymanhPmFNZ3GBx0jD129avf8hpmetfnkYbx7", kills : 56, assists : 12, deaths : 2, victory : true}
-   ]
-};
-
-
-// function to send score data to laravel to store in database
-// to be used when game has finished... wait for response true before loading results page
-function sendScoresToDatabase (scoreData) {
-   console.log("sending scores...");
-   // build POST request to send to laravel
-   var xhr = new XMLHttpRequest();
-   xhr.open("POST", baseURL + "/update/results", true);
-   xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
- 
-   // receive response back from the server that results have been posted
-   xhr.onreadystatechange = function(){
-      console.log(xhr.readyState + " " + xhr.status);
-      if (xhr.readyState === 4) {
-         if (xhr.status >= 200 && xhr.status < 300) {
-            var scoreUpdateStatus = JSON.parse(xhr.responseText);
-            console.log(scoreUpdateStatus);           
-         }
-      }
-   };
-   
-   // send score data as JSON
-   xhr.send(JSON.stringify(scoreData));
-}
-
 
 
 //===== CONSTANTS =====
@@ -85,10 +51,9 @@ var server = http.createServer(function(request, response){
          // use the json data to create a new game object and add to a master games list
          var newGame = new Game(JSON.parse(data));
          gamesList[newGame.authkey] = newGame;
+         
          console.log(gamesList);
          
-         // build new game starting state
-         buildNewGame(gamesList[newGame.authkey]);
       });
       
       response.writeHead(200, {"Content-Type" : "text/html"});
@@ -115,10 +80,28 @@ var gamesList = {};
 // constructor function for building a new game within the active games lists
 function Game (data) {
    
+   // build data from laravel
    this.authkey = data.gameAuthkey;
    this.interfaceId = data.gameInterfaceId;
    this.users = data.users;
+   
+   // track game's status (will change when victory conditions met)
+   this.status = "active";
+   
+   // add game data object to new game object and add ships array to data object
+   this.data = {};
+   this.data.ships = [];
+   
+   // populate ships array by assigning a ship to each user
+   for (var i = 0; i < this.users.length; i++) {
+      
+      this.data.ships[i] = new Ship(this.users[i].username, "ship", SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1);
+   }
+   
+   // used to mark a game object for deletion
+   this.deletionScheduled = false;
 }
+
 
 // constructor function for building a new ship (also contains method for updating ship in game)
 function Ship (name, type, sprite, xPos, yPos, rotation, speed, acceleration) {
@@ -157,9 +140,13 @@ function Ship (name, type, sprite, xPos, yPos, rotation, speed, acceleration) {
    this.kills = 0;
    this.assists = 0;
    this.deaths = 0;
+   this.victory = false;
    
    // contains history of damage done by enemies to current ship; used to calculate assists
    this.damageHistory = {};
+   
+   // flag to confirm that users have received redirect; complete complete
+   this.receivedComplete = false;
 }
 
 
@@ -198,21 +185,6 @@ function Projectile (ship, xOffset, yOffset) {
 //===== FUNCTIONS =====
 //*********************
 
-// build new game when start game request first received from laravel
-function buildNewGame (newGame) {
-   
-   // add game data object to new game object and add ships array to data object
-   newGame.data = {};
-   newGame.data.ships = [];
-   
-   // assign ship to each user
-   for (var i = 0; i < newGame.users.length; i++) {
-      
-      newGame.data.ships[i] = new Ship(newGame.users[i].username, "ship", SHIP_STARTING_DATA[i].sprite, SHIP_STARTING_DATA[i].xPos, SHIP_STARTING_DATA[i].yPos, SHIP_STARTING_DATA[i].rotation, 0, 0.1);
-   }
-}
-
-
 // function to authenticate user data requests to the server
 function authenticateUser (userData) {
 
@@ -246,6 +218,83 @@ function authenticateUser (userData) {
    } else {
  
       return false;
+   }
+}
+
+
+// function to send score data to laravel to store in database
+// to be used when game has finished... wait for response true before loading results page
+function sendScoresToDatabase (game) {
+   
+   // build score data object
+   var scoreData = buildScoreData(game);
+   
+   console.log("sending scores for game " + game.interfaceId);
+   
+   // build POST request to send to laravel
+   var xhr = new XMLHttpRequest();
+   xhr.open("POST", baseURL + "/update/results", true);
+   xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+ 
+   // receive response back from the server that results have been posted
+   xhr.onreadystatechange = function(){
+      
+      console.log(xhr.readyState + " " + xhr.status);
+      
+      // check for positive response and then adjust game status to redirect back to results
+      if (xhr.readyState === 4) {
+         
+         if (xhr.status >= 200 && xhr.status < 300) {
+            
+            // receive laravel response in JSON format (object contains single boolean property: updateResults)
+            var scoreUpdateStatus = JSON.parse(xhr.responseText);
+            console.log(scoreUpdateStatus);
+            
+            // set game status to complete (this will trigger the redirect)
+            if (scoreUpdateStatus.resultsProcessed) {
+               
+               game.status = "complete";
+            }
+         }
+      }
+   };
+   
+   console.log(scoreData);
+   
+   // send score data as JSON
+   xhr.send(JSON.stringify(scoreData));
+   
+   
+   //===== FUNCTIONS FOR sendScoresToDatabase =====
+   // function to build correctly structured score data object
+   function buildScoreData (game) {
+      
+      // initialize score data object and set up structure
+      var scoreData = {};
+      scoreData.gameAuthkey = game.authkey;
+      scoreData.users = [];
+      
+      // loop through ships and save score data to users property
+      for (var i = 0; i < game.data.ships.length; i++) {
+         
+         // loop through users to match with ships
+         for (var k = 0; k < game.users.length; k++) {
+            
+            // check for match
+            if (game.data.ships[i].name === game.users[k].username) {
+               
+               // add ship data to user object
+               scoreData.users[i] = {};
+               scoreData.users[i].userAuthkey = game.users[k].userAuthkey;
+               scoreData.users[i].kills = game.data.ships[i].kills;
+               scoreData.users[i].assists = game.data.ships[i].assists;
+               scoreData.users[i].deaths = game.data.ships[i].deaths;
+               scoreData.users[i].victory = game.data.ships[i].victory;
+            }
+         }
+      }
+      
+      return scoreData;
    }
 }
 
@@ -651,15 +700,76 @@ ioServer.sockets.on("connection", function(socket){
             firePrimaryWeapon(userShip);
          }
          
-         // run complete update of all game objects
-         updateGame(clientRequest.game);
-      
-         socket.emit('server_sends_update', clientRequest.game.data);
+         // if game status is active, update, check victory conditions, and emit update
+         if (clientRequest.game.status === "active") {
+
+            // run complete update of all game objects
+            updateGame(clientRequest.game);
+            
+            // check victory conditions and set game status to victory if true
+            // loop through players checking current kills
+            for (var i = 0; i < clientRequest.game.data.ships.length; i++) {
+               
+               // if ten kills (hard-coded for now) reached, update game status
+               if (clientRequest.game.data.ships[i].kills >= 5) {
+                  
+                  // set game and player statuses to victory
+                  clientRequest.game.status = "victory";
+                  clientRequest.game.data.ships[i].victory = true;
+               }
+            }
+            
+            socket.emit("server_sends_update", clientRequest.game.data);
+         
+         // if victory conditions met, emit victory/wait for results to be processed
+         } else if (clientRequest.game.status === "victory") {
+  
+            // update game status so that laravel isn't hit with a loop of scores
+            clientRequest.game.status = "processing_results";
+
+            sendScoresToDatabase(clientRequest.game);
+            
+            socket.emit("server_sends_victory");
+            
+         // if scores have been sent, still emit victory
+         } else if (clientRequest.game.status === "processing_results") {
+            
+            socket.emit("server_sends_victory");
+         
+         // if scores have been processed (this status if updated by function sendScoresToDatabase), emit complete
+         } else if (clientRequest.game.status === "complete") {
+            
+            // mark user as having received complete
+            if (!userShip.receivedComplete) {
+                  
+               userShip.receivedComplete = true;
+               socket.emit("server_sends_complete", clientRequest.game.interfaceId);
+            }
+            
+            // loop through users to see if all have received complete status
+            var completeCount = 0;
+            for (var i = 0; i < clientRequest.game.data.ships.length; i++) {
+               
+               // check if received complete
+               if (clientRequest.game.data.ships[i].receivedComplete) {
+                  
+                  completeCount += 1;
+               }
+            }
+            
+            // schdule game object for deletion 60 seconds from when first user receives complete status
+            if (!clientRequest.game.deletionScheduled) {
+               
+               clientRequest.game.deletionScheduled = true;
+               
+               setTimeout(function(){
+                  
+                  // destroy game object
+                  delete gamesList[clientRequest.game.authkey];
+                  console.log("game object destroyed");
+               }, 60000);
+            }
+         }
       }   
    });
-});
-
-
-
-
-   
+});   

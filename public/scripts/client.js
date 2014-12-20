@@ -25,6 +25,9 @@ window.onload = function(){
     //=====VARIABLES=====
     //*******************
     
+    // get base url
+    var baseURL = document.getElementById("baseURL").value;
+    
     // connect to node.js server
     // *****this code must be updated on live server*****
     var socket = io.connect('http://localhost:8734');
@@ -364,6 +367,19 @@ window.onload = function(){
             ctxT.fillText(score, xPosScore, yPosScore); 
         }
     }
+    
+    
+    // render game over text
+    function renderGameOverText () {
+        
+        ctxS.font = "100px Arial";
+        ctxS.fillStyle = "white";
+        ctxS.fillText("Game Over" + object.xPos, 200, 200);
+        
+        ctxS.font = "50px Arial";
+        ctxS.fillStyle = "white";
+        ctxS.fillText("...loading results" + object.yPos, 400, 400);
+    }
   
   
     //=====INIT CODE=====
@@ -410,6 +426,7 @@ window.onload = function(){
     
     // receive game ready state; when ready begin regular game loop
     socket.on("server_sends_ready_state", function(gameReady){
+        
         if (gameReady) {
             
             setInterval(requestUpdate, 1000/60);
@@ -419,9 +436,25 @@ window.onload = function(){
     
     // render game upon receiving game data from server
     socket.on("server_sends_update", function(gameData){
+        
         renderGame(gameData);
     });
+    
+    
+    // render gamer over text upon receiving victory response from server
+    socket.on("server_sends_victory", function(){
+        
+        renderGameOverText();
+    });
+    
+    
+    // redirect to results page upon receiving complete response from server
+    socket.on("server_sends_complete", function(interfaceId){
+       
+        // redirect to results page after 5 seconds
+        setTimeout(function(){
+            
+            window.location.replace(baseURL + "/results/" + interfaceId);
+        }, 5000);
+    });
 }
-
-
-
