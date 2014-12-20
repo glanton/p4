@@ -1,11 +1,23 @@
+//===== GLOBAL CONSTANTS =====
+//****************************
+
+// width and height of playable area
+var PLAY_FIELD = {
+    width : 960,
+    height : 640,
+    transition : 25
+};
+
+
+// other than globals run all code on page load
 window.onload = function(){
     
     //===== CONSTANTS =====
     //*********************
     
     var SPRITE_DATA = {
-       framesPerSheet : 64, // must be perfect square
-       framesPerSheetSqRt : 8 // square root of total frames in a sheet
+        framesPerSheet : 64, // must be perfect square
+        framesPerSheetSqRt : 8 // square root of total frames in a sheet
     };
     
     
@@ -20,15 +32,21 @@ window.onload = function(){
     
     // get particle canvas element and set dimensions
     var particleCanvas = document.getElementById("particleCanvas");
-    particleCanvas.width = 960;
-    particleCanvas.height = 640;
+    particleCanvas.width = PLAY_FIELD.width;
+    particleCanvas.height = PLAY_FIELD.height;
     var ctxP = particleCanvas.getContext("2d");
     
     // get sprite canvas element and set dimensions
     var spriteCanvas = document.getElementById("spriteCanvas");
-    spriteCanvas.width = 960;
-    spriteCanvas.height = 640;
+    spriteCanvas.width = PLAY_FIELD.width;
+    spriteCanvas.height = PLAY_FIELD.height;
     var ctxS = spriteCanvas.getContext("2d");
+    
+    // get text canvas element and set dimensions
+    var textCanvas = document.getElementById("textCanvas");
+    textCanvas.width = PLAY_FIELD.width;
+    textCanvas.height = PLAY_FIELD.height;
+    var ctxT = textCanvas.getContext("2d");
     
     // get authkeys from hidden inputs
     var userAuthkeyInput = document.getElementById("userAuthkey").value;
@@ -63,7 +81,7 @@ window.onload = function(){
     //**********************************
     
     // constructor function to build a new sprite sheet image
-    function SpriteSheet (image){
+    function SpriteSheet (image) {
         
         this.image = image;
         this.width = 0;
@@ -116,9 +134,10 @@ window.onload = function(){
     // function to clear canvas re-render all graphical objects
     function renderGame (gameData) {
         
-        // clear particle and sprite canvas in preparation for new frame
+        // clear particle, sprite, and text canvas in preparation for new frame
         ctxP.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
         ctxS.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+        ctxT.clearRect(0, 0, textCanvas.width, textCanvas.height);
         
         // render each ship and its weapons
         for (var i = 0; i < gameData.ships.length; i++) {
@@ -132,13 +151,16 @@ window.onload = function(){
             
             // always render weapons (which persist even after ship death)
             renderPrimaryWeapon(gameData.ships[i]);
+            
+            // render current scores
+            renderScores(gameData.ships[i], i);
         }
         
         // blend particle canvas
         ctxP.globalCompositeOperation = "lighter";
         
         // debug text *&^*&^*&^*&^* DELETE WHEN COMPLETE *&*&^@#@)#*
-        renderDebugText(gameData.ships[0]);
+        // renderDebugText(gameData.ships[0]);
     }
     
     // ##%#%#%$& DEBUG FUNCTION ##*&#*&^*&@#$*&#$
@@ -254,6 +276,92 @@ window.onload = function(){
             ctxP.lineTo(xPosLineEnd, yPosLineEnd);
             // ctxP.arc(projectile.xPos, projectile.yPos, 2, Math.PI * 2, false);
             ctxP.stroke();
+        }
+    }
+    
+    
+    // function to render current scores of all active players
+    function renderScores (shipObject, shipIndex) {
+        
+        // get ship player name and score
+        var name = shipObject.name;
+        var score = shipObject.kills + " | " + shipObject.assists + " | " + shipObject.deaths;
+        
+        // adjust render location according to which player it is
+        // player one
+        if (shipIndex === 0) {
+        
+            // render player one score
+            renderScore(name, score, 10, 20, 11, 40);
+        
+        // player two
+        } else if (shipIndex === 1) {
+            
+            // calculate length of player two name and score
+            var nameLength = calculateTextLength(name, "name");
+            var scoreLength = calculateTextLength(score, "score");
+            
+            // adjust coordinates of player two name and score
+            var xPosName = PLAY_FIELD.width - nameLength - 10;
+            var yPosName = PLAY_FIELD.height - 10;
+            var xPosScore = PLAY_FIELD.width - scoreLength - 11;
+            var yPosScore = yPosName - 22;
+            
+            renderScore(name, score, xPosName, yPosName, xPosScore, yPosScore);
+            
+        // player three
+        } else if (shipIndex === 2) {
+            
+            // adjust coordinates of player three name and score
+            var yPosName = PLAY_FIELD.height - 10;
+            var yPosScore = yPosName - 22;
+            
+            renderScore(name, score, 10, yPosName, 11, yPosScore);
+        
+        // player four
+        } else if (shipIndex === 3) {
+            
+            // calculate length of player two name and score
+            var nameLength = calculateTextLength(name, "name");
+            var scoreLength = calculateTextLength(score, "score");
+            
+            // adjust coordinates of player two name and score
+            var xPosName = PLAY_FIELD.width - nameLength - 10;
+            var xPosScore = PLAY_FIELD.width - scoreLength - 11;
+            
+            renderScore(name, score, xPosName, 20, xPosScore, 40)
+        }
+        
+        
+        //===== FUNCTIONS FOR renderScores =====
+        //**************************************
+        
+        // function to check length of player's name
+        function calculateTextLength (text, type) {
+            
+            // check text type and set respective font
+            if (type === "name") {
+                ctxT.font = "18px Arial";  
+            } else if (type === "score") {
+                ctxT.font = "12px Arial";
+            }
+            
+            return ctxT.measureText(text).width;
+        }
+        
+        
+        // function to render a single player's scores
+        function renderScore (name, score, xPosName, yPosName, xPosScore, yPosScore) {
+            
+           // render player name
+            ctxT.font = "18px Arial";
+            ctxT.fillStyle = "white";
+            ctxT.fillText(name, xPosName, yPosName);
+            
+            // render player score
+            ctxT.font = "12px Arial";
+            ctxT.fillStyle = "gray";
+            ctxT.fillText(score, xPosScore, yPosScore); 
         }
     }
   

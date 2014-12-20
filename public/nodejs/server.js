@@ -52,10 +52,10 @@ var PLAY_FIELD = {
 
 // constant that controls ship sprite used and ship's starting location/rotation
 var SHIP_STARTING_DATA = [
-   { sprite : "whiteShip", xPos : 100, yPos : 100, rotation : 0 },
-   { sprite : "redShip", xPos : 200, yPos : 200, rotation : 0 },
-   { sprite : "greyShip", xPos : 100, yPos : 200, rotation : 0 },
-   { sprite : "coralShip", xPos : 200, yPos : 100, rotation : 0 }
+   { sprite : "whiteShip", xPos : 100, yPos : 100, rotation : 120 },
+   { sprite : "redShip", xPos : PLAY_FIELD.width - 100, yPos : PLAY_FIELD.height - 100, rotation : 300 },
+   { sprite : "greyShip", xPos : 100, yPos : PLAY_FIELD.height - 100, rotation : 60 },
+   { sprite : "coralShip", xPos : PLAY_FIELD.width - 100, yPos : 100, rotation : 240 }
 ];
 
 var SPRITE_DATA = {
@@ -152,6 +152,14 @@ function Ship (name, type, sprite, xPos, yPos, rotation, speed, acceleration) {
       lifespan : 30,
       projectiles : []
    };
+   
+   // contains score information -- when game finishes is transferred to user objects to pass to database
+   this.kills = 0;
+   this.assists = 0;
+   this.deaths = 0;
+   
+   // contains history of damage done by enemies to current ship; used to calculate assists
+   this.damageHistory = {};
 }
 
 
@@ -302,12 +310,15 @@ function resetShip (shipObject) {
    
    shipObject.xPos = Math.random() * PLAY_FIELD.width;
    shipObject.yPos = Math.random() * PLAY_FIELD.height;
-   shipObject.rotation = 0;
+   shipObject.rotation = Math.random() * 360;
    shipObject.speed = 0;   
    shipObject.health = 100;
    
    // reset ship's history
    this.history = [];
+   
+   // reset ship's damage history
+   this.damageHistory = [];
 }
 
 
@@ -397,21 +408,40 @@ function updateWeapon (weaponObject, firingShipIndex, shipsArray) {
       // loop through enemey ships to check collision
       for (var k = 0; k < shipsArray.length; k++) {
          
-         // only count collisions with enemy ships (ships that aren't the firing ship)
-         if (k != firingShipIndex) {
+         // only count collisions with living enemy ships (ships that aren't the firing ship)
+         if (k != firingShipIndex && shipsArray[k].status === "living") {
             
             // if collision, delete projectile and apply damage
             if (calculateDistance(projectiles[i], shipsArray[k]) <= 20) {
-               
-               // delete projectile element in projectiles array
-               projectiles.splice(i, 1);
-               i -=1;
                
                // activate collision flag
                collisionFlag = true;
                
                // apply damage against ship's health
                shipsArray[k].health -= weaponObject.damage;
+               
+               // update damaage history; add to history if one already exists, otherwise create new history
+               if (shipsArray[k].damageHistory[shipsArray[firingShipIndex].name]) {
+                  
+                  shipsArray[k].damageHistory[shipsArray[firingShipIndex].name] += weaponObject.damage;
+               } else {
+                  
+                  shipsArray[k].damageHistory[shipsArray[firingShipIndex].name] = weaponObject.damage;
+               }
+               
+               // if enemy ship was destroyed update scores
+               if (shipsArray[k].health <= 0) {
+                  
+                  updateScores(shipsArray, k, firingShipIndex); 
+               }
+               
+               
+               // delete projectile element in projectiles array
+               projectiles.splice(i, 1);
+               i -= 1;
+               
+               // break out of loop checking if projectile hit any enemy ships since the current projectile was just deleted
+               break;
             }
          }
       }
@@ -438,12 +468,50 @@ function updateWeapon (weaponObject, firingShipIndex, shipsArray) {
       
       weaponObject.cooldown -= 1;
    }
+   
+   
+   //===== FUNCTIONS for updateWeapon =====
+   // function to update the damage history of a ship
+   function updateScores (shipsArray, destroyedShipIndex, firingShipIndex) {
+      
+      // get destroyed and firing ship objects
+      var destroyedShip = shipsArray[destroyedShipIndex];
+      var firingShip = shipsArray[firingShipIndex];
+      
+      // allocate kill to firing ship
+      firingShip.kills += 1;
+      
+      // allocate assists to contributing ships
+      for (var i = 0; i < shipsArray.length; i++) {
+         
+         // only allocate assists to ships other than the firing and destroyed ships
+         if (i != destroyedShipIndex && i != firingShipIndex) {
+            
+            // get ship's name
+            var contributingShipName = shipsArray[i].name;
+            
+            // check if ship contributed
+            if (destroyedShip.damageHistory[contributingShipName]) {
+               
+               // if ship contributed 50 or more damage, allocate assist
+               if (destroyedShip.damageHistory[contributingShipName] >= 50) {
+                  
+                  // allocate assist to contributing ship
+                  shipsArray[i].assists += 1;
+               }
+            }
+         }
+      }
+      
+      // add death to destroyed ship
+      shipsArray[destroyedShipIndex].deaths += 1;
+   }
 }
 
 
 // function to calculate distance between two objects
 function calculateDistance (objectOne, objectTwo) {
-   
+
    var xComponent = Math.pow(objectOne.xPos - objectTwo.xPos, 2);
    var yComponent = Math.pow(objectOne.yPos - objectTwo.yPos, 2);
    var distance = Math.sqrt(xComponent + yComponent);

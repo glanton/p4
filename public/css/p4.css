@@ -94,6 +94,10 @@ html, body {
     position: absolute;
 }
 
+#textCanvas {
+    position: absolute;
+}
+
 
 
 /********** styles for LOBBY view **********

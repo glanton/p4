@@ -25,6 +25,7 @@
     <div id="gameSpace">
         <canvas id="particleCanvas"></canvas>
         <canvas id="spriteCanvas"></canvas>
+        <canvas id="textCanvas"></canvas>
     </div>
     
 @stop
