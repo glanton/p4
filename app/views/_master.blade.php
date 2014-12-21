@@ -39,8 +39,6 @@
                 &nbsp;&nbsp;&nbsp;
             @endif
             
-            Controls
-            
         </div>
             
     </div>
