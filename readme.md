@@ -1,25 +1,33 @@
-## Laravel PHP Framework
+# p4
 
-[![Build Status](https://travis-ci.org/laravel/framework.svg)](https://travis-ci.org/laravel/framework)
-[![Total Downloads](https://poser.pugx.org/laravel/framework/downloads.svg)](https://packagist.org/packages/laravel/framework)
-[![Latest Stable Version](https://poser.pugx.org/laravel/framework/v/stable.svg)](https://packagist.org/packages/laravel/framework)
-[![Latest Unstable Version](https://poser.pugx.org/laravel/framework/v/unstable.svg)](https://packagist.org/packages/laravel/framework)
-[![License](https://poser.pugx.org/laravel/framework/license.svg)](https://packagist.org/packages/laravel/framework)
+Project Four of dwa15
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable, creative experience to be truly fulfilling. Laravel attempts to take the pain out of development by easing common tasks used in the majority of web projects, such as authentication, routing, sessions, and caching.
+### URL
 
-Laravel aims to make the development process a pleasing one for the developer without sacrificing application functionality. Happy developers make the best code. To this end, we've attempted to combine the very best of what we have seen in other web frameworks, including frameworks implemented in other languages, such as Ruby on Rails, ASP.NET MVC, and Sinatra.
+[p4.alexf.me](http://p4.alexf.me/)
 
-Laravel is accessible, yet powerful, providing powerful tools needed for large, robust applications. A superb inversion of control container, expressive migration system, and tightly integrated unit testing support give you the tools you need to build any application with which you are tasked.
+### Project Desc
 
-## Official Documentation
+This is Project 4 (p4), which I've more-or-less named Tayak, after the jsBin I did most of my prototyping on. It is an online realtime multiplayer space combat game. Basically an arcade-style deathmatch in space for between 2 and 4 players. The realtime multiplayer component of the application is driven by a Node.js server which is running within my Laravel application. Laravel handles the management of user accounts, the lobby where you can create or join a game, and the histroical records of all games played.
 
-Documentation for the entire framework can be found on the [Laravel website](http://laravel.com/docs).
+I haven't yet added explanation about controls within the application itself, so here they are:
 
-### Contributing To Laravel
+- Navigation using the arrow keys. Up and Down function as throttles (you only need to hold it until you've reached you desired speed and then can let go).
+- Weapon fired using the Z key. Pretty self-explanatory.
 
-**All issues and pull requests should be filed on the [laravel/framework](http://github.com/laravel/framework) repository.**
+There's too much going on behind the scenes to capture well here. A key highlight is the AJAX that runs the lobby, keeping the list of games and who is in one game up-to-date within 5 seconds. The results pages come from the Node.js server sending a POST request of data back to Laravel. And as much as possible, I've tried to make the application secure and tamper proof. The client side of the game is only able to render and send back inputs, but is given no way to directly change game data. The server is authoriative about the game state.
 
-### License
+###Demo Info
 
-The Laravel framework is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT)
+I did a partial demo in section last week, and will submit a Jing demo later today. Link to be posted shortly.
+
+### Additional Info
+
+Outside of Laravel I used the following tools:
+
+- jQuery, which powers all of the dynamic interface elements.
+- Node.js, which is my realtime server that the actual games run on. The Node server receives game data from Laravel, then runs independently, and then when the game is over POSTs results back to Laravel.
+- Socket.io, which lets me user websockets for sending data back and forth from the Node server. I haven't done much of a stress test but on a very small scale performance is pretty snappy.
+- Forever, a command-line interface tool for keeping the Node.js server running even when I log out of the shell.
+
+I think that's it. There's still a lot I want to do, and the interface isn't nearly as polished as I envision. The biggest thing I'd like to add is an explosion generation that will provide feedback when weapon projectiles hit enemy ships and when ships are destroyed. There's a fairly serious gameplay bug where a kill will sometimes provide two kills instead of one. I haven't had time to investigate yet but it seems pretty unpredictable. I'm sure there are other bugs and holes out there.
