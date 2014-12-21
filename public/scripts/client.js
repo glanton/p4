@@ -30,8 +30,8 @@ window.onload = function(){
     
     // connect to node.js server
     // *****this code must be updated on live server*****
-    var socket = io.connect('http://localhost:8734');
-    // var socket = io.connect('http://104.131.10.181:8734/')
+    // var socket = io.connect('http://localhost:8734');
+    var socket = io.connect('http://104.131.10.181:8734/')
     
     // get particle canvas element and set dimensions
     var particleCanvas = document.getElementById("particleCanvas");

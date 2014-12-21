@@ -1,8 +1,8 @@
 // get base url from input on page
 // connect to node.js server
 // *****this code must be updated on live server*****
-var baseURL = "http://localhost:8888";
-// var baseURL = "http://p4.alex.me";
+// var baseURL = "http://localhost:8888";
+var baseURL = "http://p4.alex.me";
 
 
 
