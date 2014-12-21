@@ -22,42 +22,66 @@
             <li>{{ Session::get('loginError') }}</li>
         @endif
     </ul>
-        
-    <p>login</p>
-        
-    {{ Form::open(array('id' => 'loginForm', 'url' => '/login', 'method' => 'POST')) }}
     
-        {{ Form::email('loginEmail', '', array('id' => 'loginEmail', 'placeholder' => 'Email', 'required')) }}
-        
-        {{ Form::password('loginPassword', array('id' => 'loginPassword', 'placeholder' => 'Password', 'required')) }}
-        
-        {{ Form::submit('Submit') }}
+    <div class="login">
     
-    {{ Form::close() }}
+        <div class="loginHead">login</div>
+            
+        {{ Form::open(array('id' => 'loginForm', 'url' => '/login', 'method' => 'POST')) }}
+        
+            {{ Form::email('loginEmail', '', array('id' => 'loginEmail', 'placeholder' => 'Email', 'required')) }}
+            
+            <br><br>
+            
+            {{ Form::password('loginPassword', array('id' => 'loginPassword', 'placeholder' => 'Password', 'required')) }}
+            
+            <br><br>
+            
+            {{ Form::submit('Submit') }}
+        
+        {{ Form::close() }}
+        
+        <br><br>
+        
+        <div class="loginHead">signup</div>
+            
+        {{ Form::open(array('id' => 'signupForm', 'url' => '/signup', 'method' => 'POST')) }}
+            
+            {{ Form::label('username', 'Username') }}
+            <br>
+            {{ Form::text('username', '', array('id' => 'username', 'required')) }}
+            
+            <br><br>
+            
+            {{ Form::label('email', 'Email') }}
+            <br>
+            {{ Form::email('email', '', array('id' => 'email', 'required')) }}
+            
+            <br><br>
+            
+            {{ Form::label('confirmEmail', 'Confirm Email') }}
+            <br>
+            {{ Form::email('confirmEmail', '', array('id' => 'confirmEmail', 'required')) }}
+            
+            <br><br>
+            
+            {{ Form::label('password', 'Password') }}
+            <br>
+            {{ Form::password('password', array('id' => 'password', 'required')) }}
+            
+            <br><br>
+            
+            {{ Form::label('confirmPassword', 'Confirm Password') }}
+            <br>
+            {{ Form::password('confirmPassword', array('id' => 'password', 'required')) }}
+            
+            <br><br>
+            
+            {{ Form::submit('Submit') }}
+            
+        {{ Form::close() }}
     
-    
-    <p>signup</p>
-        
-    {{ Form::open(array('id' => 'signupForm', 'url' => '/signup', 'method' => 'POST')) }}
-        
-        {{ Form::label('username', 'Username') }}
-        {{ Form::text('username', '', array('id' => 'username', 'required')) }}
-        
-        {{ Form::label('email', 'Email') }}
-        {{ Form::email('email', '', array('id' => 'email', 'required')) }}
-        
-        {{ Form::label('confirmEmail', 'Confirm Email') }}
-        {{ Form::email('confirmEmail', '', array('id' => 'confirmEmail', 'required')) }}
-        
-        {{ Form::label('password', 'Password') }}
-        {{ Form::password('password', array('id' => 'password', 'required')) }}
-        
-        {{ Form::label('confirmPassword', 'Confirm Password') }}
-        {{ Form::password('confirmPassword', array('id' => 'password', 'required')) }}
-        
-        {{ Form::submit('Submit') }}
-        
-    {{ Form::close() }}
+    </div>
     
 @stop
 

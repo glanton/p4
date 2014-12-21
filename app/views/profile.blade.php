@@ -8,12 +8,34 @@
 
 @section('controls')
     
+    @if (Auth::user()->username == $user->username)
+        {{ Form::open(array('id' => 'editProfileForm', 'url' => '/edit/profile', 'method' => 'GET')) }}
+        
+            {{ Form::submit('Edit Profile') }}
+        
+        {{ Form::close() }}
+    @endif
+    
 @stop
 
 
 @section('content')
     
-    <p>profile</p>
+    <div class="profile">
+    
+        <div class="profile-username"> {{ $user->username; }}</div>
+            
+        @if ($user->description)
+            
+            <div class="profile-description"> {{ $user->description; }}</div>
+            
+        @else
+            
+            <div class="profile-description">(this user has not written a description yet)</div>
+            
+        @endif
+        
+    </div>
     
 @stop
 

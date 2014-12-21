@@ -162,18 +162,6 @@ window.onload = function(){
         // blend particle canvas
         ctxP.globalCompositeOperation = "lighter";
         
-        // debug text *&^*&^*&^*&^* DELETE WHEN COMPLETE *&*&^@#@)#*
-        // renderDebugText(gameData.ships[0]);
-    }
-    
-    // ##%#%#%$& DEBUG FUNCTION ##*&#*&^*&@#$*&#$
-    function renderDebugText (object) {
-        
-        ctxS.font = "20px Arial";
-        ctxS.fillStyle = "white";
-        ctxS.fillText("xPos: " + object.xPos, 50, 50);
-        ctxS.fillText("yPos: " + object.yPos, 50, 80);
-        ctxS.fillText("speed: " + object.speed, 50, 110);
     }
     
   
@@ -336,9 +324,7 @@ window.onload = function(){
         }
         
         
-        //===== FUNCTIONS FOR renderScores =====
-        //**************************************
-        
+        //===== FUNCTIONS FOR renderScores =====        
         // function to check length of player's name
         function calculateTextLength (text, type) {
             
@@ -372,13 +358,16 @@ window.onload = function(){
     // render game over text
     function renderGameOverText () {
         
-        ctxS.font = "100px Arial";
-        ctxS.fillStyle = "white";
-        ctxS.fillText("Game Over" + object.xPos, 200, 200);
+        ctxT.clearRect(0, 0, textCanvas.width, textCanvas.height);
         
-        ctxS.font = "50px Arial";
-        ctxS.fillStyle = "white";
-        ctxS.fillText("...loading results" + object.yPos, 400, 400);
+        ctxT.font = "100px Arial";
+        ctxT.fillStyle = "white";
+        ctxT.fillText("Game Over", 210, 280);
+        
+        ctxT.font = "40px Arial";
+        ctxT.fillStyle = "#999999";
+        ctxT.fillText("...loading results", 370, 330);
+        
     }
   
   

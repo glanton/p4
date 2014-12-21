@@ -183,6 +183,10 @@ class InterfaceController extends BaseController {
                     
                     // save game
                     $game->save();
+                    
+                    // delete game to meet DELETE requirement of CRUD for project... probably should remove later to keep statistics of inactive games
+                    $game->delete();
+                    
                
                     // reset user's current game authkey
                     $user->current_game_authkey = 'not_in_game';
@@ -480,15 +484,48 @@ class InterfaceController extends BaseController {
     getResults
     =====*/  
     public function getResults($interfaceId) {
-        return View::make('results');
+        
+        // get game object of requested interfaceId
+        $game = Game::where('interface_id', '=', $interfaceId)
+            ->first();
+        
+        // check that game with provided interfaceId exists
+        if (!empty($game)) {
+            
+            // get all users within the game
+            $users = $game->users;
+            
+            // pass results data to view for display     
+            return View::make('results')
+                ->with('interfaceId', $interfaceId)
+                ->with('users', $users);
+        }
+        
+        // redirect to lobby by default if requested interfaceId does not exist
+        return Redirect::to('lobby');
     }
+     
      
      
     /*=====
     getProfile
     =====*/ 
-    public function getProfile($profileId = null) {        
-        return View::make('profile');
+    public function getProfile($username = null) {
+        
+        // if no profile entered, display authenticated user's profile information
+        if ($username === null) {
+            
+            $user = Auth::user();
+        
+        // if profile entered, display requested user's profile information
+        } else {
+            
+            $user = User::where('username', '=', $username)
+                ->first();
+        }
+        
+        return View::make('profile')
+            ->with('user', $user);
     }
      
 
@@ -496,6 +533,7 @@ class InterfaceController extends BaseController {
     getEditProfile
     =====*/   
     public function getEditProfile() {
+        
         return View::make('edit_profile');
     }
     
@@ -504,7 +542,35 @@ class InterfaceController extends BaseController {
     postEditProfile
     =====*/
     public function postEditProfile() {
-        return View::make('profile');
+        
+        // gather signup form data
+        $editData = Input::all();
+        
+        // set validation rules
+        $rules = array(
+            'email' => 'email|required',
+            'confirmEmail' => 'same:email',
+        );
+        
+        // build the validator
+        $validator = Validator::make($editData, $rules);
+        
+        // check validation
+        if ($validator->passes()) {
+            
+            // save profile edits
+            Auth::user()->email = Input::get('email');
+            Auth::user()->description = Input::get('description');
+            Auth::user()->save();
+            
+            return Redirect::to('profile');
+        }
+        
+        // on validation failure
+        Input::flash();
+        
+        return View::make('/edit_profile')
+            ->withErrors($validator);
     }
     
 }

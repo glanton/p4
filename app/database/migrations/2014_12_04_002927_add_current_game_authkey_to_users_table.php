@@ -3,7 +3,7 @@
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddCurrentGameAuthkeyToBooksTable extends Migration {
+class AddCurrentGameAuthkeyToUsersTable extends Migration {
 
 	/**
 	 * Run the migrations.
@@ -29,7 +29,7 @@ class AddCurrentGameAuthkeyToBooksTable extends Migration {
 	public function down()
 	{
             
-            Schema:table('users', function($table) {
+            Schema::table('users', function($table) {
                
                $table->dropColumn('current_game_authkey');
                 

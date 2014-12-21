@@ -151,3 +151,86 @@ html, body {
     float: left;
     width: 50%;
 }
+
+
+
+/********** styles for LOBBY view **********
+*******************************************/
+
+.login {
+    margin: 40px 40px;
+}
+
+.loginHead {
+    font-size: 2em;
+    margin: 20px 0;
+}
+
+
+/********** styles for RESULTS view *********
+*****************************************/
+
+.profile {
+    margin: 40px 40px;
+}
+
+.profile-username {
+    font-size: 3em;
+    margin-bottom: 20px;
+}
+
+.profile-description {
+    color: #666666;
+    font-size: 1.5em;
+}
+
+
+
+/********** styles for RESULTS view *********
+*****************************************/
+
+.colorRow td {
+    background-color: black;
+    padding: 4px;
+}
+
+th {
+    font-size: 0.5em;
+    color: #444444;
+    background-color: #191919;
+}
+
+td {
+    padding: 8px 50px;
+}
+
+.results {
+    padding: 20px 20px;
+    margin: 40px 20px;
+}
+
+.results-gameInterfaceId {
+    color: #444444;
+    font-size: 1.5em;
+    margin-bottom: 30px;
+}
+
+.resultsTable {
+    font-size: 2em;
+    text-align:center;
+    background-color: #444444;
+    border-collapse: collapse;
+}
+
+.userCell {
+    text-align: left;
+}
+
+.victorText {
+    color: #ffbb00;
+    font-size: 0.5em;
+}
+
+.winner {
+    background-color: #ffff77;
+}

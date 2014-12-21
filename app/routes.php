@@ -25,7 +25,7 @@ Route::post('/join/game', 'InterfaceController@postJoinGame');
 Route::post('check/game', 'InterfaceController@postCheckGameStatus');
 Route::get('/game', 'InterfaceController@getGame');
 Route::get('/results/{interfaceId}', 'InterfaceController@getResults');
-Route::get('/profile/{profileId?}', 'InterfaceController@getProfile');
+Route::get('/profile/{username?}', 'InterfaceController@getProfile');
 Route::get('/edit/profile', 'InterfaceController@getEditProfile');
 Route::post('/edit/profile', 'InterfaceController@postEditProfile');
 
