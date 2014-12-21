@@ -19,7 +19,9 @@ There's too much going on behind the scenes to capture well here. A key highligh
 
 ###Demo Info
 
-I did a partial demo in section last week, and will submit a Jing demo later today. Link to be posted shortly.
+I did a partial demo in section last week, and will submit a Jing demo later today. Link to be posted shortly. Update, here's the Jing demo:
+
+[http://screencast.com/t/5u6Hr6iVHlm](http://screencast.com/t/5u6Hr6iVHlm)
 
 ### Additional Info
 
